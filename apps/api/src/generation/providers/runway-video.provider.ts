@@ -34,6 +34,11 @@ const RUNWAY_TEXT_TO_VIDEO_MODELS = new Set([
   'gemini_omni_flash',
 ]);
 
+const DEFAULT_POLL_TIMEOUT_MS = 8 * 60 * 1000;
+const DEFAULT_POLL_INITIAL_INTERVAL_MS = 2000;
+const DEFAULT_POLL_MAX_INTERVAL_MS = 15000;
+const DEFAULT_POLL_BACKOFF_MULTIPLIER = 1.2;
+
 @Injectable()
 export class RunwayVideoProvider {
   async generate(input: VideoGenerationInput): Promise<ProviderOutput> {
@@ -94,8 +99,29 @@ export class RunwayVideoProvider {
   }
 
   private async pollUntilComplete(baseUrl: string, apiKey: string, taskId: string) {
-    const attempts = 30;
-    for (let index = 0; index < attempts; index += 1) {
+    const timeoutMs = this.readNumberEnv('RUNWAY_POLL_TIMEOUT_MS', DEFAULT_POLL_TIMEOUT_MS, 30_000);
+    const maxIntervalMs = this.readNumberEnv(
+      'RUNWAY_POLL_MAX_INTERVAL_MS',
+      DEFAULT_POLL_MAX_INTERVAL_MS,
+      1_000,
+    );
+    let intervalMs = this.readNumberEnv(
+      'RUNWAY_POLL_INITIAL_INTERVAL_MS',
+      DEFAULT_POLL_INITIAL_INTERVAL_MS,
+      500,
+    );
+    const backoffMultiplier = this.readNumberEnv(
+      'RUNWAY_POLL_BACKOFF_MULTIPLIER',
+      DEFAULT_POLL_BACKOFF_MULTIPLIER,
+      1,
+    );
+
+    const startedAt = Date.now();
+    const deadline = startedAt + timeoutMs;
+    let polls = 0;
+
+    while (Date.now() < deadline) {
+      polls += 1;
       const res = await fetch(`${baseUrl}/tasks/${taskId}`, {
         method: 'GET',
         headers: {
@@ -120,9 +146,30 @@ export class RunwayVideoProvider {
         throw new Error(task.error || `Runway task failed with status ${status}`);
       }
 
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const remainingMs = deadline - Date.now();
+      if (remainingMs <= 0) {
+        break;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, Math.min(intervalMs, remainingMs)));
+      intervalMs = Math.min(maxIntervalMs, Math.round(intervalMs * backoffMultiplier));
     }
 
-    throw new Error('Runway task timed out');
+    const elapsedMs = Date.now() - startedAt;
+    throw new Error(`Runway task timed out after ${elapsedMs}ms (${polls} polls)`);
+  }
+
+  private readNumberEnv(name: string, fallback: number, min: number): number {
+    const raw = process.env[name];
+    if (!raw) {
+      return fallback;
+    }
+
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed) || parsed < min) {
+      return fallback;
+    }
+
+    return parsed;
   }
 }

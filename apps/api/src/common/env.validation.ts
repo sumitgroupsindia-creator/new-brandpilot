@@ -71,6 +71,22 @@ class EnvVariables {
   @IsOptional()
   RUNWAY_WEBHOOK_SECRET?: string;
 
+  @IsNumber()
+  @IsOptional()
+  RUNWAY_POLL_TIMEOUT_MS?: number;
+
+  @IsNumber()
+  @IsOptional()
+  RUNWAY_POLL_INITIAL_INTERVAL_MS?: number;
+
+  @IsNumber()
+  @IsOptional()
+  RUNWAY_POLL_MAX_INTERVAL_MS?: number;
+
+  @IsNumber()
+  @IsOptional()
+  RUNWAY_POLL_BACKOFF_MULTIPLIER?: number;
+
   @IsString()
   @IsOptional()
   OUTBOX_WORKER_ENABLED?: string;

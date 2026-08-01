@@ -14,11 +14,32 @@ type RunwayTaskResponse = {
   error?: string;
 };
 
+const RUNWAY_API_VERSION = '2024-11-06';
+const RUNWAY_TEXT_TO_VIDEO_MODELS = new Set([
+  'gen4.5',
+  'kling2.5_turbo_pro',
+  'kling3.0_pro',
+  'kling3.0_4k',
+  'kling3.0_standard',
+  'klingO3_pro',
+  'klingO3_standard',
+  'klingO3_4k',
+  'seedance2',
+  'seedance2_fast',
+  'seedance2_mini',
+  'happyhorse_1_0',
+  'veo3',
+  'veo3.1',
+  'veo3.1_fast',
+  'gemini_omni_flash',
+]);
+
 @Injectable()
 export class RunwayVideoProvider {
   async generate(input: VideoGenerationInput): Promise<ProviderOutput> {
     const apiKey = process.env.RUNWAY_API_KEY;
-    const model = input.model || process.env.RUNWAY_MODEL || 'runway-gen';
+    const requestedModel = input.model || process.env.RUNWAY_MODEL || 'gen4.5';
+    const model = RUNWAY_TEXT_TO_VIDEO_MODELS.has(requestedModel) ? requestedModel : 'gen4.5';
 
     if (!apiKey) {
       return {
@@ -30,17 +51,19 @@ export class RunwayVideoProvider {
     }
 
     const baseUrl = process.env.RUNWAY_API_BASE_URL || 'https://api.dev.runwayml.com/v1';
-    const createResponse = await fetch(`${baseUrl}/tasks`, {
+    const normalizedBaseUrl = baseUrl.endsWith('/v1') ? baseUrl : `${baseUrl.replace(/\/$/, '')}/v1`;
+    const createResponse = await fetch(`${normalizedBaseUrl}/text_to_video`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
+        'X-Runway-Version': RUNWAY_API_VERSION,
       },
       body: JSON.stringify({
         model,
-        input: {
-          promptText: input.prompt,
-        },
+        promptText: input.prompt,
+        ratio: '1280:720',
+        duration: 5,
       }),
     });
 
@@ -55,7 +78,7 @@ export class RunwayVideoProvider {
       throw new Error('Runway task id missing');
     }
 
-    const completed = await this.pollUntilComplete(baseUrl, apiKey, taskId);
+    const completed = await this.pollUntilComplete(normalizedBaseUrl, apiKey, taskId);
     const url = completed.output?.[0]?.url;
     if (!url) {
       throw new Error('Runway completed without output URL');
@@ -78,6 +101,7 @@ export class RunwayVideoProvider {
         headers: {
           Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
+          'X-Runway-Version': RUNWAY_API_VERSION,
         },
       });
 

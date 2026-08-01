@@ -11,8 +11,8 @@ const links = [
   { to: '/app/home', label: 'Home' },
   { to: '/app/frames', label: 'Frames' },
   { to: '/app/categories', label: 'Categories' },
-  { to: '/app/generate', label: 'Generate' },
-  { to: '/app/history', label: 'History' },
+  { to: '/app/ai-studio', label: 'AI Studio' },
+  { to: '/app/ai-generation-history', label: 'AI Gen History' },
   { to: '/app/projects', label: 'Projects' },
   { to: '/app/wallet', label: 'Wallet' },
   { to: '/app/settings', label: 'Settings' },
@@ -61,7 +61,7 @@ export function WebLayout() {
   }, [themeMode]);
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-brand-surface text-[var(--color-ink)]">
+    <div className="relative h-screen overflow-hidden bg-brand-surface text-[var(--color-ink)]">
       <div className="pointer-events-none absolute inset-0 bg-grid opacity-20" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_top,_rgba(8,145,178,0.14),_transparent_70%)]" />
 
@@ -72,7 +72,7 @@ export function WebLayout() {
         onLogout={clearAuth}
       />
 
-      <div className="mx-auto grid w-full max-w-[1400px] grid-cols-1 gap-4 px-3 py-4 sm:px-6 md:grid-cols-[260px_1fr] md:py-6">
+      <div className="mx-auto grid h-[calc(100vh-73px)] w-full max-w-[1480px] grid-cols-1 gap-3 overflow-hidden px-3 py-4 sm:px-4 lg:px-5 md:grid-cols-[248px_minmax(0,1fr)] md:items-start md:py-5 xl:gap-4">
         <AppSidebar
           links={links}
           open={isNavOpen}
@@ -81,7 +81,7 @@ export function WebLayout() {
           onThemeModeChange={setThemeMode}
         />
 
-        <main className="space-y-6">
+        <main className="min-w-0 space-y-5 overflow-y-auto pr-1 pb-4 md:h-full md:pr-2">
           <Outlet />
         </main>
       </div>

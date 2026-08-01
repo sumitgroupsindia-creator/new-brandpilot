@@ -44,7 +44,7 @@ export function HomePage() {
             <p className="mt-4 max-w-2xl text-lg text-white/90">Search premium templates, choose a category, customize with your content, and export polished assets fast.</p>
 
             <div className="mt-6 flex flex-wrap gap-3">
-              <Link to="/app/generate"><Button variant="secondary" className="border border-white/50 bg-white text-[#1f2a44] shadow-[0_10px_30px_rgba(6,8,20,0.2)] hover:bg-[#f8fbff]">+ New design</Button></Link>
+              <Link to="/app/ai-studio"><Button variant="secondary" className="border border-white/50 bg-white text-[#1f2a44] shadow-[0_10px_30px_rgba(6,8,20,0.2)] hover:bg-[#f8fbff]">+ New design</Button></Link>
               <Link to="/app/frames"><Button variant="outline" className="border border-white/60 bg-[#1f2a44]/30 text-white shadow-[0_10px_28px_rgba(6,8,20,0.16)] hover:bg-[#1f2a44]/44">Browse templates</Button></Link>
             </div>
           </div>
@@ -79,7 +79,7 @@ export function HomePage() {
       <Card className="dashboard-quick-actions p-4 sm:p-5" variant="default">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <QuickAction title="New design" subtitle="Blank canvas" tone="pink" />
-          <QuickAction title="AI generate" subtitle="From prompt" tone="violet" />
+          <QuickAction title="AI studio" subtitle="Image + Video" tone="violet" />
           <QuickAction title="Upload image" subtitle="Edit existing" tone="blue" />
           <QuickAction title="Go Premium" subtitle="Unlock all" tone="amber" />
         </div>

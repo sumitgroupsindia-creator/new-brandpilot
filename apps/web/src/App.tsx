@@ -8,6 +8,7 @@ import { FramesPage } from './pages/app/FramesPage';
 import { FrameDetailPage } from './pages/app/FrameDetailPage';
 import { GeneratePage } from './pages/app/GeneratePage';
 import { HistoryPage } from './pages/app/HistoryPage';
+import { AiGenerationHistoryPage } from './pages/app/AiGenerationHistoryPage';
 import { ProjectsPage } from './pages/app/ProjectsPage';
 import { WalletPage } from './pages/app/WalletPage';
 import { SettingsPage } from './pages/app/SettingsPage';
@@ -46,7 +47,9 @@ function App() {
         <Route path="frames" element={<FramesPage />} />
         <Route path="categories" element={<CategoriesPage />} />
         <Route path="frames/:frameId" element={<FrameDetailPage />} />
-        <Route path="generate" element={<GeneratePage />} />
+        <Route path="ai-studio" element={<GeneratePage />} />
+        <Route path="generate" element={<Navigate to="/app/ai-studio" replace />} />
+        <Route path="ai-generation-history" element={<AiGenerationHistoryPage />} />
         <Route path="history" element={<HistoryPage />} />
         <Route path="projects" element={<ProjectsPage />} />
         <Route path="wallet" element={<WalletPage />} />

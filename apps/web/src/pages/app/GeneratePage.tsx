@@ -1,21 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { DynamicFrameFields } from '../../components/frame/DynamicFrameFields';
-import { PageHeader } from '@shared/components/shared/PageHeader';
 import { SectionHeader } from '@shared/components/shared/SectionHeader';
+import { Badge } from '@shared/components/ui/Badge';
 import { Button } from '@shared/components/ui/Button';
 import { Card } from '@shared/components/ui/Card';
-import { useDynamicFrameFields } from '../../hooks/useDynamicFrameFields';
+import { SearchInput } from '@shared/components/ui/SearchInput';
 import {
   apiCreateGenerationJob,
-  apiGetFrame,
-  apiGetFrameCategories,
   apiGetFramesByCategory,
   apiGetGenerationJobs,
-  apiGetImageCategories,
 } from '../../lib/api';
-import { readFrameInputDraft } from '../../lib/frameInputDrafts';
-import { renderFrameInputsAsDataUrl } from '../../lib/frameInputImageExport';
 
 function fileToDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -32,197 +26,30 @@ function fileToDataUrl(file: File) {
   });
 }
 
-  function toRenderableImageUrl(url?: string | null) {
-    const value = (url ?? '').trim();
-    if (!value) {
-      return undefined;
-    }
-
-    if (/^https?:\/\//i.test(value)) {
-      return `/api/image-proxy?url=${encodeURIComponent(value)}`;
-    }
-
-    return value;
-  }
-
 export function GeneratePage() {
   const queryClient = useQueryClient();
-  const frameCategoriesQuery = useQuery({ queryKey: ['frame-categories'], queryFn: apiGetFrameCategories });
-  const imageCategoriesQuery = useQuery({ queryKey: ['image-categories'], queryFn: apiGetImageCategories });
-
-  const [frameCategoryId, setFrameCategoryId] = useState('');
-  const [imageCategoryId, setImageCategoryId] = useState('');
-  const [imageSubcategoryId, setImageSubcategoryId] = useState('');
-  const [imageId, setImageId] = useState('');
-  const [frameFilter, setFrameFilter] = useState<'all' | 'featured' | 'trending'>('all');
-  const [kind, setKind] = useState<'IMAGE' | 'VIDEO'>('IMAGE');
-  const [frameId, setFrameId] = useState('');
-  const [prompt, setPrompt] = useState('');
-  const [negativePrompt, setNegativePrompt] = useState('');
-  const [model, setModel] = useState('gpt-image-1');
-  const [title, setTitle] = useState('');
-  const [composeMode, setComposeMode] = useState<'manual' | 'preview'>('manual');
-
-  const framesQuery = useQuery({
-    queryKey: ['frames', frameCategoryId, frameFilter],
-    queryFn: () =>
-      apiGetFramesByCategory({
-        categoryId: frameCategoryId || undefined,
-        filter: frameFilter,
-      }),
-  });
-
-  const frames = framesQuery.data ?? [];
-  const selectedFrameId = useMemo(() => frameId || frames[0]?.id || '', [frameId, frames]);
-
-  const frameDetailQuery = useQuery({
-    queryKey: ['frame', selectedFrameId],
-    queryFn: () => apiGetFrame(selectedFrameId),
-    enabled: Boolean(selectedFrameId),
-  });
-
+  const framesQuery = useQuery({ queryKey: ['frames', 'ai-studio'], queryFn: () => apiGetFramesByCategory() });
   const jobsQuery = useQuery({ queryKey: ['generation-jobs'], queryFn: apiGetGenerationJobs });
 
-  const frameCategoriesRaw = frameCategoriesQuery.data ?? [];
-  const imageCategoriesRaw = imageCategoriesQuery.data ?? [];
-  const jobs = jobsQuery.data ?? [];
-  const frameCategories = useMemo(
-    () => [...frameCategoriesRaw].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name)),
-    [frameCategoriesRaw],
-  );
-
-  const imageCategories = useMemo(
-    () =>
-      [...imageCategoriesRaw]
-        .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
-        .map(category => ({
-          ...category,
-          images: [...category.images].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name)),
-        })),
-    [imageCategoriesRaw],
-  );
-
-  const rootImageCategories = useMemo(() => imageCategories.filter(category => !category.parentId), [imageCategories]);
-  const childImageCategories = useMemo(
-    () => imageCategories.filter(category => category.parentId === imageCategoryId),
-    [imageCategories, imageCategoryId],
-  );
-
+  const [kind, setKind] = useState<'IMAGE' | 'VIDEO'>('IMAGE');
+  const [prompt, setPrompt] = useState('');
+  const [referencePhotoPreviewUrl, setReferencePhotoPreviewUrl] = useState('');
+  const [referencePhotoDataUrl, setReferencePhotoDataUrl] = useState('');
   const [submissionError, setSubmissionError] = useState<string | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string>('');
-  const [isPreviewRendering, setIsPreviewRendering] = useState(false);
-  const [previewError, setPreviewError] = useState<string | null>(null);
 
-  const selectedImageCategory = useMemo(() => {
-    if (imageSubcategoryId) {
-      return imageCategories.find(category => category.id === imageSubcategoryId) ?? null;
-    }
-    return imageCategories.find(category => category.id === imageCategoryId) ?? rootImageCategories[0] ?? null;
-  }, [imageCategories, imageCategoryId, imageSubcategoryId, rootImageCategories]);
-
-  const selectedImages = useMemo(() => selectedImageCategory?.images ?? [], [selectedImageCategory]);
-
-  const selectedImage = useMemo(
-    () => selectedImages.find(image => image.id === imageId) ?? selectedImages[0] ?? null,
-    [selectedImages, imageId],
-  );
-
-  const frame = frameDetailQuery.data;
-  const dynamicFieldState = useDynamicFrameFields(frame?.dynamicFields ?? []);
-
-  useEffect(() => {
-    if (!imageCategories.length) {
-      setImageCategoryId('');
-      setImageSubcategoryId('');
-      return;
-    }
-
-    if (!imageCategoryId && rootImageCategories.length) {
-      setImageCategoryId(rootImageCategories[0]?.id ?? '');
-      return;
-    }
-
-    if (imageCategoryId && !rootImageCategories.some(category => category.id === imageCategoryId)) {
-      setImageCategoryId(rootImageCategories[0]?.id ?? '');
-    }
-  }, [imageCategories, imageCategoryId, rootImageCategories]);
-
-  useEffect(() => {
-    if (!imageCategoryId) {
-      setImageSubcategoryId('');
-      return;
-    }
-
-    if (!childImageCategories.length) {
-      setImageSubcategoryId('');
-      return;
-    }
-
-    if (!childImageCategories.some(category => category.id === imageSubcategoryId)) {
-      setImageSubcategoryId(childImageCategories[0]?.id ?? '');
-    }
-  }, [childImageCategories, imageCategoryId, imageSubcategoryId]);
-
-  useEffect(() => {
-    if (!selectedImageCategory) {
-      setImageId('');
-      return;
-    }
-    if (!selectedImages.some(image => image.id === imageId)) {
-      setImageId(selectedImages[0]?.id ?? '');
-    }
-  }, [selectedImageCategory, selectedImages, imageId]);
-
-  useEffect(() => {
-    if (!selectedFrameId) {
-      setPreviewUrl('');
-      return;
-    }
-
-    const timer = window.setTimeout(async () => {
-      if (!frame) {
-        return;
-      }
-
-      setIsPreviewRendering(true);
-      setPreviewError(null);
-      try {
-        const nextUrl = await renderFrameInputsAsDataUrl({
-          filename: 'preview.png',
-          frameTitle: frame.title,
-            backgroundUrl: toRenderableImageUrl(selectedImage?.url) ?? frame.thumbnailUrl,
-          thumbnailUrl: frame.thumbnailUrl,
-          templateLayers: frame.templateLayers,
-          renderSize: frame.renderSize,
-          fields: frame.dynamicFields ?? [],
-          values: dynamicFieldState.values,
-        });
-        setPreviewUrl(nextUrl);
-      } catch {
-        setPreviewError('Preview failed to render.');
-      } finally {
-        setIsPreviewRendering(false);
-      }
-    }, 180);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [
-    selectedFrameId,
-    frame,
-    selectedImage,
-    dynamicFieldState.values.text,
-    dynamicFieldState.values.imageDataUrl,
-    dynamicFieldState.values.imagePreviewUrl,
-  ]);
+  const frames = framesQuery.data ?? [];
+  const selectedFrame = useMemo(() => frames[0] ?? null, [frames]);
+  const jobs = jobsQuery.data ?? [];
+  const imageJobs = useMemo(() => jobs.filter(job => job.kind === 'IMAGE'), [jobs]);
+  const videoJobs = useMemo(() => jobs.filter(job => job.kind === 'VIDEO'), [jobs]);
+  const latestImageJob = imageJobs[0] ?? null;
+  const latestVideoJob = videoJobs[0] ?? null;
+  const promptIdeas = ['Diwali sale poster', 'New product launch', 'Birthday flyer', 'Wedding invite'];
 
   const createJobMutation = useMutation({
     mutationFn: apiCreateGenerationJob,
     onSuccess: () => {
       setPrompt('');
-      setNegativePrompt('');
-      setTitle('');
       queryClient.invalidateQueries({ queryKey: ['generation-jobs'] });
       queryClient.invalidateQueries({ queryKey: ['assets'] });
       queryClient.invalidateQueries({ queryKey: ['wallet-summary'] });
@@ -230,256 +57,263 @@ export function GeneratePage() {
     },
   });
 
-  const onQueueGeneration = () => {
-    if (!selectedFrameId || !prompt.trim()) return;
-    const selectedFrame = frames.find(frame => frame.id === selectedFrameId);
-    if (selectedFrame?.isLocked) {
-      setSubmissionError('This frame requires an active subscription.');
-      return;
-    }
-    if (selectedImage?.isLocked) {
-      setSubmissionError('This image requires an active subscription.');
+  const onGenerate = () => {
+    if (!selectedFrame?.id) {
+      setSubmissionError('No template is available right now. Please add at least one frame.');
       return;
     }
 
-    const draftFromFrameDetail = readFrameInputDraft(selectedFrameId);
-    const frameInputs = {
-      text: {
-        ...(draftFromFrameDetail?.text ?? {}),
-        ...dynamicFieldState.values.text,
-      },
-      images: {
-        ...(draftFromFrameDetail?.images ?? {}),
-        ...Object.fromEntries(
-          Object.entries(dynamicFieldState.values.imageDataUrl)
-            .filter(([, dataUrl]) => Boolean(dataUrl))
-            .map(([key, dataUrl]) => [
-              key,
-              {
-                dataUrl,
-                backgroundMode: dynamicFieldState.values.imageBackgroundMode[key] ?? 'with',
-              },
-            ]),
-        ),
-      },
-    };
+    if (!prompt.trim()) {
+      setSubmissionError('Prompt is required.');
+      return;
+    }
+
+    if (selectedFrame.isLocked) {
+      setSubmissionError('This template requires an active subscription.');
+      return;
+    }
 
     setSubmissionError(null);
     createJobMutation.mutate({
-      frameId: selectedFrameId,
-      imageId: selectedImage?.id,
+      frameId: selectedFrame.id,
       kind,
-      prompt,
-      title: title.trim() || undefined,
-      negativePrompt: negativePrompt.trim() || undefined,
-      model,
-      frameInputs: Object.keys(frameInputs.text).length || Object.keys(frameInputs.images).length ? frameInputs : undefined,
+      prompt: prompt.trim(),
+      title: prompt.trim().slice(0, 70),
+      frameInputs: referencePhotoDataUrl
+        ? {
+          text: {},
+          images: {
+            user_reference_photo: {
+              dataUrl: referencePhotoDataUrl,
+              backgroundMode: 'with',
+            },
+          },
+        }
+        : undefined,
     });
   };
 
   return (
     <>
-      <PageHeader
-        eyebrow="AI Compose"
-        title="Compose and queue branded assets"
-        description="Pick image + frame, fill dynamic values, preview, and queue generation using existing backend logic."
-      />
+      <section className="dashboard-hero overflow-hidden rounded-[28px] border border-white/20 bg-[linear-gradient(122deg,#ff6a22_0%,#f23686_56%,#5f68ea_100%)] p-5 text-white shadow-[0_22px_58px_rgba(58,22,84,0.26)] sm:p-7">
+        <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+          <div>
+            <span className="inline-flex rounded-full bg-white/22 px-3 py-1 text-xs font-semibold tracking-[0.06em]">AI Studio • New</span>
+            <h1 className="mt-4 max-w-3xl text-4xl font-bold leading-tight sm:text-5xl">Create premium visuals first, then turn them into motion.</h1>
+            <p className="mt-4 max-w-2xl text-lg text-white/90">Upload a reference photo if needed, write one sharp prompt, and generate image or video with the same creative direction.</p>
 
-      <Card className="p-4 sm:p-5">
-        <SectionHeader title="Composition Setup" subtitle="Keep your current generation behavior with a cleaner workspace." />
-        <div className="mb-4 rounded-[24px] border border-teal-100 bg-teal-50/80 p-4">
-          <div className="flex flex-wrap gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-teal-700">
-            <span className="rounded-full bg-white px-2.5 py-1">1. Pick image</span>
-            <span className="rounded-full bg-white px-2.5 py-1">2. Choose frame</span>
-            <span className="rounded-full bg-white px-2.5 py-1">3. Fill values</span>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Button
+                type="button"
+                onClick={() => setKind('IMAGE')}
+                variant="secondary"
+                className="border border-white/50 bg-white text-[#1f2a44] shadow-[0_10px_30px_rgba(6,8,20,0.2)] hover:bg-[#f8fbff]"
+              >
+                Start with Image
+              </Button>
+              <Button
+                type="button"
+                onClick={() => setKind('VIDEO')}
+                variant="outline"
+                className="border border-white/60 bg-[#1f2a44]/30 text-white shadow-[0_10px_28px_rgba(6,8,20,0.16)] hover:bg-[#1f2a44]/44"
+              >
+                Switch to Video
+              </Button>
+            </div>
           </div>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            Start with the image you want to brand, then place a frame over it and complete the fields needed for the final export.
-          </p>
-        </div>
 
-        <form className="grid gap-3 md:grid-cols-2">
-          <label className="space-y-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Image category</span>
-            <select className="field" value={imageCategoryId} onChange={event => setImageCategoryId(event.target.value)}>
-              <option value="">Select collection</option>
-              {rootImageCategories.map(category => (
-                <option key={category.id} value={category.id}>{category.name}</option>
+          <div className="dashboard-hero-panel rounded-[26px] border border-white/20 bg-white/18 p-4 backdrop-blur-md sm:p-5">
+            <p className="text-xl font-semibold text-white">Text to creative</p>
+            <p className="mt-1 text-sm text-white/90">Describe your design idea and continue in the generator below.</p>
+            <SearchInput
+              className="mt-3"
+              placeholder="e.g. Diwali sale 50% off"
+              aria-label="AI Studio prompt helper"
+              value={prompt}
+              onChange={event => setPrompt(event.target.value)}
+            />
+            <div className="mt-3 flex flex-wrap gap-2">
+              {promptIdeas.map(tag => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => setPrompt(tag)}
+                  className="rounded-full bg-white/25 px-3 py-1 text-sm text-white transition hover:bg-white/32"
+                >
+                  {tag}
+                </button>
               ))}
-            </select>
-          </label>
+            </div>
+            <div className="mt-4 grid grid-cols-4 gap-2">
+              <div className="dashboard-hero-metric rounded-xl bg-black/16 p-2">
+                <p className="text-xs text-white/75">Assets</p>
+                <p className="text-xl font-semibold">Signed</p>
+              </div>
+              <div className="dashboard-hero-metric rounded-xl bg-black/16 p-2">
+                <p className="text-xs text-white/75">Credits</p>
+                <p className="text-xl font-semibold">70</p>
+              </div>
+              <div className="dashboard-hero-metric rounded-xl bg-black/16 p-2">
+                <p className="text-xs text-white/75">Image AI</p>
+                <p className="text-xl font-semibold">Ready</p>
+              </div>
+              <div className="dashboard-hero-metric rounded-xl bg-black/16 p-2">
+                <p className="text-xs text-white/75">Video AI</p>
+                <p className="text-xl font-semibold">Ready</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-          {childImageCategories.length ? (
-            <label className="space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Subcategory</span>
-              <select className="field" value={imageSubcategoryId} onChange={event => setImageSubcategoryId(event.target.value)}>
-                <option value="">All in this collection</option>
-                {childImageCategories.map(category => (
-                  <option key={category.id} value={category.id}>{category.name}</option>
-                ))}
-              </select>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,0.96fr)_minmax(360px,1.04fr)] xl:items-start">
+        <Card variant="elevated" className="ai-studio-left overflow-hidden p-4 sm:p-5">
+          <SectionHeader title="AI Generation" subtitle="Select output type, optional reference image, and prompt." />
+
+          <div className="mb-4 grid gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => setKind('IMAGE')}
+              className={`ai-mode-btn ${kind === 'IMAGE' ? 'ai-mode-btn-active-image' : ''}`}
+            >
+              <p>1. Image</p>
+              <span>Selected for visual generation</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setKind('VIDEO')}
+              className={`ai-mode-btn ${kind === 'VIDEO' ? 'ai-mode-btn-active-video' : ''}`}
+            >
+              <p>2. Video</p>
+              <span>Selected for motion generation</span>
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-ink-subtle)]">Reference image</span>
+              <div className="ai-upload-shell">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="ai-upload-input"
+                  onChange={async event => {
+                    const file = event.target.files?.[0];
+                    if (!file) {
+                      setReferencePhotoDataUrl('');
+                      setReferencePhotoPreviewUrl('');
+                      return;
+                    }
+                    setReferencePhotoPreviewUrl(URL.createObjectURL(file));
+                    const dataUrl = await fileToDataUrl(file);
+                    setReferencePhotoDataUrl(dataUrl);
+                  }}
+                />
+              </div>
+              <p className="text-sm leading-6 text-[var(--color-ink-subtle)]">Optional image upload karo to AI us image ko edit या transform karega. Blank rakho to fresh image generate hogi.</p>
             </label>
-          ) : null}
 
-          <label className="space-y-2 md:col-span-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Base image</span>
-            <select className="field" value={imageId} onChange={event => setImageId(event.target.value)}>
-              <option value="">Select image</option>
-              {selectedImages.map(image => (
-                <option key={image.id} value={image.id} disabled={Boolean(image.isLocked)}>
-                  {image.name}{image.isLocked ? ' (subscription required)' : ''}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="space-y-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Output type</span>
-            <select
-              className="field"
-              value={kind}
-              onChange={event => {
-                const nextKind = event.target.value as 'IMAGE' | 'VIDEO';
-                setKind(nextKind);
-                setModel(nextKind === 'VIDEO' ? 'runway-gen' : 'gpt-image-1');
-              }}
-            >
-              <option value="IMAGE">Image composition</option>
-              <option value="VIDEO">Video composition</option>
-            </select>
-          </label>
-
-          <label className="space-y-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Render mode</span>
-            <select className="field" value={composeMode} onChange={event => setComposeMode(event.target.value as 'manual' | 'preview')}>
-              <option value="manual">Manual compose</option>
-              <option value="preview">Preview only</option>
-            </select>
-          </label>
-
-          <label className="space-y-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Frame category</span>
-            <select className="field" value={frameCategoryId} onChange={event => setFrameCategoryId(event.target.value)}>
-              <option value="">All frame categories</option>
-              {frameCategories.map(category => (
-                <option key={category.id} value={category.id}>{category.name}</option>
-              ))}
-            </select>
-          </label>
-
-          <label className="space-y-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Frame filter</span>
-            <select
-              className="field"
-              value={frameFilter}
-              onChange={event => setFrameFilter(event.target.value as 'all' | 'featured' | 'trending')}
-            >
-              <option value="all">All frames</option>
-              <option value="featured">Featured frames</option>
-              <option value="trending">Trending frames</option>
-            </select>
-          </label>
-
-          <label className="space-y-2 md:col-span-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Choose frame</span>
-            <select className="field" value={selectedFrameId} onChange={event => setFrameId(event.target.value)}>
-              {frames.map(frame => (
-                <option key={frame.id} value={frame.id} disabled={Boolean(frame.isLocked)}>
-                  {frame.title}{frame.isLocked ? ' (subscription required)' : ''}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div className="md:col-span-2 rounded-[24px] border border-slate-200 bg-slate-50/80 p-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Selection summary</p>
-                <p className="mt-1 text-sm font-semibold text-slate-900">
-                  {selectedImage?.name ?? 'No image selected'} + {frames.find(frame => frame.id === selectedFrameId)?.title ?? 'No frame selected'}
-                </p>
+            {referencePhotoPreviewUrl ? (
+              <div className="ai-panel-muted">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-ink-subtle)]">Selected Photo</p>
+                <img src={referencePhotoPreviewUrl} alt="Reference" className="max-h-56 w-full rounded-lg border border-[var(--color-border)] object-contain" />
               </div>
-              <div className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-slate-600">
-                {selectedFrameId ? 'Ready to render' : 'Pick a frame'}
-              </div>
+            ) : null}
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-ink-subtle)]">Image Prompt</span>
+              <textarea
+                className="ai-textarea"
+                placeholder="A cinematic Indian festival celebration scene with lights, depth, and vibrant colors"
+                value={prompt}
+                onChange={event => setPrompt(event.target.value)}
+              />
+            </label>
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                onClick={onGenerate}
+                loading={createJobMutation.isPending}
+                className="min-w-[250px] rounded-full border-0 bg-[linear-gradient(135deg,#ff7a18,#ff5b00)] text-white shadow-[0_18px_36px_rgba(255,107,43,0.28)] hover:opacity-95"
+              >
+                {kind === 'VIDEO' ? 'Generate Pro Video' : 'Generate Pro Image'}
+              </Button>
+              {latestImageJob ? (
+                <Button type="button" variant="secondary" className="min-w-[220px] rounded-full">
+                  Last generated image
+                </Button>
+              ) : null}
             </div>
-          </div>
 
-          <DynamicFrameFields
-            fields={frame?.dynamicFields ?? []}
-            values={dynamicFieldState.values}
-            onTextChange={dynamicFieldState.setTextValue}
-            onImageSelect={async (key, file) => {
-              const previewObjectUrl = URL.createObjectURL(file);
-              dynamicFieldState.setImagePreview(key, previewObjectUrl);
-              const dataUrl = await fileToDataUrl(file);
-              dynamicFieldState.setImageData(key, dataUrl);
-            }}
-            onImageBackgroundModeChange={dynamicFieldState.setImageBackground}
-          />
+            {submissionError ? <p className="text-sm text-[var(--color-warning-700)]">{submissionError}</p> : null}
+            {createJobMutation.isError ? <p className="text-sm text-[var(--color-danger-700)]">Failed to queue generation job.</p> : null}
 
-          <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">Live Preview</p>
-            {isPreviewRendering ? <p className="text-xs text-slate-500">Rendering preview...</p> : null}
-            {previewError ? <p className="text-xs text-rose-600">{previewError}</p> : null}
-            {previewUrl ? (
-              <>
-                <img src={previewUrl} alt="Live preview" className="max-h-[360px] w-full rounded-lg border border-slate-200 object-contain" />
-                <div className="mt-2">
-                  <a
-                    className="btn-secondary inline-flex"
-                    href={previewUrl}
-                    download={`${(title.trim() || frame?.title || 'framed-image').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.png`}
-                  >
-                    Download Preview
-                  </a>
+            <div className="ai-panel-muted text-sm text-[var(--color-ink-muted)]">
+              Using template: <span className="font-semibold text-[var(--color-ink)]">{selectedFrame?.title ?? 'None'}</span>
+            </div>
+
+            <div className="ai-panel-muted">
+              <div className="mb-2 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-ink-subtle)]">Generated Images</p>
+                  <p className="text-xs text-[var(--color-ink-subtle)]">Click any image to preview or use it for video.</p>
                 </div>
-              </>
-            ) : (
-              <p className="text-xs text-slate-500">Pick image and frame to see preview.</p>
-            )}
-          </div>
-
-          <input
-            className="field md:col-span-2"
-            placeholder="Optional title"
-            value={title}
-            onChange={event => setTitle(event.target.value)}
-          />
-          <textarea
-            className="field md:col-span-2"
-            rows={4}
-            placeholder="Optional notes for the composition"
-            value={prompt}
-            onChange={event => setPrompt(event.target.value)}
-          />
-          <textarea
-            className="field md:col-span-2"
-            rows={3}
-            placeholder="Optional negative notes"
-            value={negativePrompt}
-            onChange={event => setNegativePrompt(event.target.value)}
-          />
-          <Button className="md:col-span-2" type="button" onClick={onQueueGeneration} loading={createJobMutation.isPending}>
-            Queue composition
-          </Button>
-          {submissionError ? <p className="text-sm text-amber-700">{submissionError}</p> : null}
-          {createJobMutation.isError ? <p className="text-sm text-rose-700">Failed to queue job.</p> : null}
-        </form>
-      </Card>
-
-      <Card className="p-4 sm:p-5">
-        <SectionHeader title="Composition Status" subtitle="Queued and running jobs for your image-and-frame compositions." />
-        {jobsQuery.isLoading ? <p className="mb-3 text-sm text-slate-500">Loading jobs...</p> : null}
-        <div className="space-y-3">
-          {jobs.map(job => (
-            <div key={job.id} className="rounded-xl border border-slate-200 p-3">
-              <p className="text-sm font-medium">{job.title}</p>
-              <p className="text-xs text-slate-500">{job.status} • {job.kind} • {job.frameName}</p>
+                <Button type="button" variant="ghost" size="sm">Refresh</Button>
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {imageJobs.slice(0, 4).map((job, index) => (
+                  <div key={job.id} className="ai-gallery-thumb">
+                    <div className="ai-gallery-thumb-art" />
+                    <div className="ai-gallery-thumb-meta">
+                      <span>#{imageJobs.length - index}</span>
+                      <span>{job.status}</span>
+                    </div>
+                  </div>
+                ))}
+                {!imageJobs.length ? (
+                  <div className="col-span-full rounded-[12px] border border-dashed border-[var(--color-border)] p-3 text-xs text-[var(--color-ink-subtle)]">
+                    No generated images yet.
+                  </div>
+                ) : null}
+              </div>
             </div>
-          ))}
+          </div>
+        </Card>
+
+        <div className="space-y-4">
+          <Card variant="elevated" className="p-4 sm:p-5">
+            <SectionHeader title="Generated Image" subtitle="Preview area for latest image result." />
+            <div className="ai-preview-board min-h-[360px]">
+              <p>{latestImageJob ? `Latest image job: ${latestImageJob.title}` : 'No generated image yet'}</p>
+            </div>
+          </Card>
+
+          <Card variant="elevated" className="p-4 sm:p-5">
+            <SectionHeader title="Generated Video" subtitle="Video result appears after completion." />
+            <div className="ai-preview-board min-h-[260px]">
+              <p>{latestVideoJob ? `Latest video job: ${latestVideoJob.title}` : 'Video result will appear here after completion'}</p>
+            </div>
+          </Card>
+
+          <Card variant="elevated" className="p-4 sm:p-5">
+            <SectionHeader title="Recent AI Jobs" subtitle="Operational status for image and video generation." />
+            {jobsQuery.isLoading ? <p className="text-sm text-[var(--color-ink-subtle)]">Loading jobs...</p> : null}
+            <div className="space-y-2">
+              {jobs.slice(0, 6).map(job => (
+                <div key={job.id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-[var(--color-ink)] line-clamp-1">{job.title}</p>
+                    <Badge variant={job.status === 'FAILED' ? 'error' : job.status === 'SUCCEEDED' ? 'success' : 'warning'}>{job.status}</Badge>
+                  </div>
+                  <p className="text-xs text-[var(--color-ink-subtle)]">{job.kind} • {job.frameName}</p>
+                </div>
+              ))}
+              {!jobsQuery.isLoading && !jobs.length ? <p className="text-sm text-[var(--color-ink-subtle)]">No jobs yet.</p> : null}
+            </div>
+          </Card>
         </div>
-      </Card>
+      </div>
     </>
   );
 }

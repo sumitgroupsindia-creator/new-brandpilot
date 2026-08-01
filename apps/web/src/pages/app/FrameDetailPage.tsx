@@ -98,7 +98,7 @@ export function FrameDetailPage() {
       images,
     });
 
-    setSaveNote('Saved. Generate page will auto-use these values.');
+    setSaveNote('Saved. AI Studio will auto-use these values.');
   };
 
   const downloadFilledData = async () => {

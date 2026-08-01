@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { showGlobalDialog, showGlobalToast } from '@brandpilot/shared';
 
 const DEFAULT_TENANT_SLUG = import.meta.env.VITE_TENANT_SLUG ?? 'default';
 
@@ -20,6 +21,59 @@ adminApi.interceptors.request.use(config => {
   }
   return config;
 });
+
+adminApi.interceptors.response.use(
+  response => response,
+  error => {
+    if (axios.isAxiosError(error) && error.code !== 'ERR_CANCELED') {
+      const message = extractAdminApiErrorMessage(error);
+      const status = error.response?.status;
+
+      if (status === 401 || status === 403 || /permission|access|subscription|premium/i.test(message)) {
+        showGlobalDialog({
+          title: 'Permission required',
+          description: message,
+          tone: 'warning',
+          confirmLabel: 'Okay',
+        });
+      } else {
+        showGlobalToast({
+          title: 'Request failed',
+          description: message,
+          tone: 'error',
+        });
+      }
+    }
+
+    return Promise.reject(error);
+  },
+);
+
+function extractAdminApiErrorMessage(error: unknown) {
+  if (!axios.isAxiosError(error)) {
+    return 'Unexpected error occurred. Please try again.';
+  }
+
+  const payload = error.response?.data as { message?: string | string[]; error?: string } | undefined;
+
+  if (Array.isArray(payload?.message)) {
+    return payload.message.join(' ');
+  }
+
+  if (typeof payload?.message === 'string' && payload.message.trim()) {
+    return payload.message;
+  }
+
+  if (typeof payload?.error === 'string' && payload.error.trim()) {
+    return payload.error;
+  }
+
+  if (typeof error.message === 'string' && error.message.trim()) {
+    return error.message;
+  }
+
+  return 'Unexpected error occurred. Please try again.';
+}
 
 export interface TokenPairResponse {
   accessToken: string;

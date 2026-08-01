@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { SectionHeader } from '@shared/components/shared/SectionHeader';
+import { useFeedback } from '@brandpilot/shared';
 import { Badge } from '@shared/components/ui/Badge';
 import { Button } from '@shared/components/ui/Button';
 import { Card } from '@shared/components/ui/Card';
@@ -35,7 +36,7 @@ export function GeneratePage() {
   const [prompt, setPrompt] = useState('');
   const [referencePhotoPreviewUrl, setReferencePhotoPreviewUrl] = useState('');
   const [referencePhotoDataUrl, setReferencePhotoDataUrl] = useState('');
-  const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const { showDialog, showToast } = useFeedback();
 
   const frames = framesQuery.data ?? [];
   const selectedFrame = useMemo(() => frames[0] ?? null, [frames]);
@@ -59,21 +60,33 @@ export function GeneratePage() {
 
   const onGenerate = () => {
     if (!selectedFrame?.id) {
-      setSubmissionError('No template is available right now. Please add at least one frame.');
+      showToast({
+        title: 'Template missing',
+        description: 'No template is available right now. Please add at least one frame.',
+        tone: 'warning',
+      });
       return;
     }
 
     if (!prompt.trim()) {
-      setSubmissionError('Prompt is required.');
+      showToast({
+        title: 'Prompt required',
+        description: 'Write a prompt before starting generation.',
+        tone: 'warning',
+      });
       return;
     }
 
     if (selectedFrame.isLocked) {
-      setSubmissionError('This template requires an active subscription.');
+      showDialog({
+        title: 'Premium template locked',
+        description: 'This template requires an active subscription. Upgrade your plan or choose an unlocked template to continue.',
+        tone: 'warning',
+        confirmLabel: 'Okay',
+      });
       return;
     }
 
-    setSubmissionError(null);
     createJobMutation.mutate({
       frameId: selectedFrame.id,
       kind,
@@ -245,10 +258,6 @@ export function GeneratePage() {
                 </Button>
               ) : null}
             </div>
-
-            {submissionError ? <p className="text-sm text-[var(--color-warning-700)]">{submissionError}</p> : null}
-            {createJobMutation.isError ? <p className="text-sm text-[var(--color-danger-700)]">Failed to queue generation job.</p> : null}
-
             <div className="ai-panel-muted text-sm text-[var(--color-ink-muted)]">
               Using template: <span className="font-semibold text-[var(--color-ink)]">{selectedFrame?.title ?? 'None'}</span>
             </div>

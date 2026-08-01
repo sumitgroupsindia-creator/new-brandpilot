@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { showGlobalDialog, showGlobalToast } from '@brandpilot/shared';
 import { DynamicFieldDefinition, FrameInputDraft, FrameTemplateLayer } from '../types/frameFields';
 
 const DEFAULT_TENANT_SLUG = import.meta.env.VITE_TENANT_SLUG ?? 'default';
@@ -24,11 +25,64 @@ webApi.interceptors.request.use(config => {
   return config;
 });
 
+webApi.interceptors.response.use(
+  response => response,
+  error => {
+    if (axios.isAxiosError(error) && error.code !== 'ERR_CANCELED') {
+      const message = extractApiErrorMessage(error);
+      const status = error.response?.status;
+
+      if (status === 401 || status === 403 || /subscription|plan|premium|access/i.test(message)) {
+        showGlobalDialog({
+          title: 'Action needs access',
+          description: message,
+          tone: 'warning',
+          confirmLabel: 'Okay',
+        });
+      } else {
+        showGlobalToast({
+          title: 'Something went wrong',
+          description: message,
+          tone: 'error',
+        });
+      }
+    }
+
+    return Promise.reject(error);
+  },
+);
+
 function createIdempotencyKey() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
   }
   return `idem_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+}
+
+function extractApiErrorMessage(error: unknown) {
+  if (!axios.isAxiosError(error)) {
+    return 'Unexpected error occurred. Please try again.';
+  }
+
+  const payload = error.response?.data as { message?: string | string[]; error?: string } | undefined;
+
+  if (Array.isArray(payload?.message)) {
+    return payload.message.join(' ');
+  }
+
+  if (typeof payload?.message === 'string' && payload.message.trim()) {
+    return payload.message;
+  }
+
+  if (typeof payload?.error === 'string' && payload.error.trim()) {
+    return payload.error;
+  }
+
+  if (typeof error.message === 'string' && error.message.trim()) {
+    return error.message;
+  }
+
+  return 'Unexpected error occurred. Please try again.';
 }
 
 export interface TokenPairResponse {

@@ -296,8 +296,20 @@ export class ConfigService implements OnModuleInit {
       parallelism: 4,
     });
 
-    const superAdminRole = await this.prisma.role.findUnique({
+    const superAdminRole = await this.prisma.role.upsert({
       where: { tenantId_key: { tenantId, key: 'SUPER_ADMIN' } },
+      update: {
+        name: 'Super Admin',
+        description: 'Full platform access across subscription, wallet, and tenant controls.',
+        isSystem: true,
+      },
+      create: {
+        tenantId,
+        key: 'SUPER_ADMIN',
+        name: 'Super Admin',
+        description: 'Full platform access across subscription, wallet, and tenant controls.',
+        isSystem: true,
+      },
     });
 
     for (const email of adminSeed.emails) {

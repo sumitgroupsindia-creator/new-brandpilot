@@ -16,7 +16,7 @@ export function AppHeader({ appName, userName, onToggleNav, onLogout }: AppHeade
   const userEmail = userName.includes('@') ? userName : `${userName.toLowerCase().replace(/\s+/g, '')}@gmail.com`;
 
   return (
-    <header className="sticky top-0 z-[var(--z-sticky)] border-b border-[var(--color-border)] bg-white/92 backdrop-blur-xl">
+    <header className="sticky top-0 z-[70] border-b border-[var(--color-border)] bg-white/92 backdrop-blur-xl">
       <div className="mx-auto grid max-w-[1480px] grid-cols-[minmax(210px,248px)_1fr_auto] items-center gap-3 px-3 py-3 sm:px-4 lg:px-5 xl:gap-4">
         <div className="flex items-center gap-2 sm:gap-3">
           <Button className="md:hidden" variant="ghost" size="sm" onClick={onToggleNav} aria-label="Open navigation">

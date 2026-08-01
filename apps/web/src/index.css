@@ -226,6 +226,26 @@
 		@apply border-blue-300 bg-[#eef5ff] shadow-[0_16px_34px_rgba(59,130,246,0.12)];
 	}
 
+	.ai-studio-cta {
+		@apply min-w-[188px] rounded-full border px-5 py-3 text-base font-semibold shadow-[0_10px_28px_rgba(6,8,20,0.16)] transition duration-200;
+	}
+
+	.ai-studio-cta-active {
+		@apply border-white/50 bg-white text-[#1f2a44];
+	}
+
+	.ai-studio-cta-active:hover {
+		background-color: #f8fbff;
+	}
+
+	.ai-studio-cta-secondary {
+		@apply border-white/60 bg-[#1f2a44]/30 text-white;
+	}
+
+	.ai-studio-cta-secondary:hover {
+		background-color: rgba(31, 42, 68, 0.44);
+	}
+
 	.ai-panel-muted {
 		@apply rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3;
 	}

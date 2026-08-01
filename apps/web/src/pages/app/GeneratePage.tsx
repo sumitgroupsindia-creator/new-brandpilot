@@ -42,8 +42,18 @@ function fileToDataUrl(file: File) {
 export function GeneratePage() {
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
-  const framesQuery = useQuery({ queryKey: ['frames', 'ai-studio'], queryFn: () => apiGetFramesByCategory() });
-  const jobsQuery = useQuery({ queryKey: ['generation-jobs'], queryFn: apiGetGenerationJobs });
+  const framesQuery = useQuery({
+    queryKey: ['frames', 'ai-studio'],
+    queryFn: () => apiGetFramesByCategory(),
+    refetchOnMount: 'always',
+    staleTime: 0,
+  });
+  const jobsQuery = useQuery({
+    queryKey: ['generation-jobs', 'ai-studio'],
+    queryFn: apiGetGenerationJobs,
+    refetchOnMount: 'always',
+    staleTime: 0,
+  });
 
   const [kind, setKind] = useState<'IMAGE' | 'VIDEO'>('IMAGE');
   const [prompt, setPrompt] = useState('');
@@ -144,7 +154,7 @@ export function GeneratePage() {
                 type="button"
                 onClick={() => setKind('IMAGE')}
                 variant="secondary"
-                className="border border-white/50 bg-white text-[#1f2a44] shadow-[0_10px_30px_rgba(6,8,20,0.2)] hover:bg-[#f8fbff]"
+                className="ai-studio-cta ai-studio-cta-active"
               >
                 Start with Image
               </Button>
@@ -152,7 +162,7 @@ export function GeneratePage() {
                 type="button"
                 onClick={() => setKind('VIDEO')}
                 variant="outline"
-                className="border border-white/60 bg-[#1f2a44]/30 text-white shadow-[0_10px_28px_rgba(6,8,20,0.16)] hover:bg-[#1f2a44]/44"
+                className="ai-studio-cta ai-studio-cta-secondary"
               >
                 Switch to Video
               </Button>

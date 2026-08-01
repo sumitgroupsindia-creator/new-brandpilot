@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Outlet } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { AppHeader } from '@shared/components/shared/AppHeader';
 import { AppSidebar } from '@shared/components/shared/AppSidebar';
@@ -24,6 +25,7 @@ const THEME_STORAGE_KEY = 'brandpilot-theme-mode';
 export function WebLayout() {
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => getStoredThemeMode());
+  const location = useLocation();
   const me = useMe();
   const updateMe = useUpdateMe();
   const clearAuth = useAuthStore(state => state.clear);
@@ -104,7 +106,7 @@ export function WebLayout() {
           onThemeModeChange={setThemeMode}
         />
 
-        <main className="min-w-0 space-y-5 overflow-y-auto pr-1 pb-4 md:h-full md:pr-2">
+        <main key={location.pathname} className="min-w-0 space-y-5 overflow-y-auto pr-1 pb-4 md:h-full md:pr-2">
           <Outlet />
         </main>
       </div>

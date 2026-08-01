@@ -2,6 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { DynamicFieldDefinition, DynamicFrameFieldValues, ImageBackgroundMode } from '../types/frameFields';
 
 export function useDynamicFrameFields(fields: DynamicFieldDefinition[]) {
+  const fieldSignature = fields
+    .map(field => `${field.key}:${field.type}:${field.defaultValue ?? ''}`)
+    .join('|');
+
   const textDefaults = useMemo(() => {
     const defaults: Record<string, string> = {};
     for (const field of fields) {
@@ -10,7 +14,7 @@ export function useDynamicFrameFields(fields: DynamicFieldDefinition[]) {
       }
     }
     return defaults;
-  }, [fields]);
+  }, [fieldSignature]);
 
   const [text, setText] = useState<Record<string, string>>(textDefaults);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<Record<string, string>>({});

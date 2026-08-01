@@ -20,7 +20,7 @@ interface AppSidebarProps {
 export function AppSidebar({ links, open = false, onNavigate, themeMode, onThemeModeChange }: AppSidebarProps) {
   return (
     <>
-      <aside className="hidden h-[calc(100vh-92px)] rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface-1)] p-3 shadow-[var(--shadow-xs)] md:sticky md:top-[78px] md:block">
+      <aside className="hidden h-[calc(100vh-92px)] rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface-1)] p-3 shadow-[var(--shadow-xs)] md:sticky md:top-[78px] md:z-[70] md:block">
         <SidebarContent links={links} onNavigate={onNavigate} themeMode={themeMode} onThemeModeChange={onThemeModeChange} />
       </aside>
 

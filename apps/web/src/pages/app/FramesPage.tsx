@@ -1,11 +1,21 @@
 import { Link } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ShellCard } from '../../components/ShellCard';
+import { PageHeader } from '@shared/components/shared/PageHeader';
+import { SectionHeader } from '@shared/components/shared/SectionHeader';
+import { TemplateCard } from '@shared/components/shared/TemplateCard';
+import { TemplateGrid } from '@shared/components/shared/TemplateGrid';
+import { SearchInput } from '@shared/components/ui/SearchInput';
+import { Card } from '@shared/components/ui/Card';
+import { LoadingState } from '@shared/components/ui/LoadingState';
+import { ErrorState } from '@shared/components/ui/ErrorState';
+import { EmptyState } from '@shared/components/ui/EmptyState';
+import { Button } from '@shared/components/ui/Button';
 import { apiGetFrameCategories, apiGetFramesByCategory } from '../../lib/api';
 
 export function FramesPage() {
   const [categoryId, setCategoryId] = useState('');
+  const [search, setSearch] = useState('');
   const frameCategoriesQuery = useQuery({ queryKey: ['frame-categories'], queryFn: apiGetFrameCategories });
   const framesQuery = useQuery({
     queryKey: ['frames', categoryId],
@@ -18,6 +28,17 @@ export function FramesPage() {
     [frameCategoriesRaw],
   );
   const frames = framesQuery.data ?? [];
+  const filteredFrames = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return frames;
+    return frames.filter(frame => {
+      return (
+        frame.title.toLowerCase().includes(query)
+        || frame.category.toLowerCase().includes(query)
+        || frame.description.toLowerCase().includes(query)
+      );
+    });
+  }, [frames, search]);
 
   useEffect(() => {
     if (!frameCategories.length || categoryId) {
@@ -27,45 +48,57 @@ export function FramesPage() {
   }, [frameCategories, categoryId]);
 
   return (
-    <ShellCard title="Frame Catalogue" subtitle="Free and premium templates with dynamic placeholders.">
-      {framesQuery.isLoading ? <p className="mb-3 text-sm text-slate-500">Loading frames...</p> : null}
-      {framesQuery.isError ? <p className="mb-3 text-sm text-rose-700">Failed to load frames.</p> : null}
-      <div className="mb-4 grid gap-3 md:max-w-sm">
-        <select className="field" value={categoryId} onChange={event => setCategoryId(event.target.value)}>
-          <option value="">All categories</option>
-          {frameCategories.map(category => (
-            <option key={category.id} value={category.id}>{category.name}</option>
-          ))}
-        </select>
-      </div>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {frames.map(frame => (
-          <article key={frame.id} className="rounded-xl border border-slate-200 p-4">
-              {frame.thumbnailUrl ? (
-                <img src={frame.thumbnailUrl} alt={frame.title} className="mb-3 h-32 w-full rounded-lg object-cover" />
-              ) : null}
-            <div className="flex items-center justify-between">
-              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{frame.category}</p>
-              <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${frame.tier === 'PREMIUM' ? 'bg-amber-100 text-amber-800' : 'bg-teal-100 text-teal-800'}`}>
-                {frame.tier}
-              </span>
-            </div>
-            <h3 className="mt-2 font-semibold">{frame.title}</h3>
-            <p className="mt-1 text-sm text-slate-600">{frame.description}</p>
-            <div className="mt-3 flex items-center justify-between">
-              <span className="text-sm font-medium text-slate-800">{frame.estimatedCredits} credits</span>
-              <div className="flex items-center gap-3">
-                {frame.isLocked ? (
-                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">Subscription required</span>
-                ) : null}
-                <Link className="text-sm font-semibold text-teal-700 underline" to={`/app/frames/${frame.id}`}>
-                  Open
-                </Link>
-              </div>
-            </div>
-          </article>
-        ))}
-      </div>
-    </ShellCard>
+    <>
+      <PageHeader
+        eyebrow="Template Gallery"
+        title="Select a design template"
+        description="Browse premium and free templates, preview visual style, and open the editor without changing underlying business logic."
+      />
+
+      <Card className="p-4 sm:p-5">
+        <SectionHeader title="Filters" subtitle="Search by name/category and refine by frame category." />
+        <div className="grid gap-3 md:grid-cols-2">
+          <SearchInput placeholder="Search templates" value={search} onChange={event => setSearch(event.target.value)} />
+          <select className="field md:col-span-2" value={categoryId} onChange={event => setCategoryId(event.target.value)}>
+            <option value="">All categories</option>
+            {frameCategories.map(category => (
+              <option key={category.id} value={category.id}>{category.name}</option>
+            ))}
+          </select>
+        </div>
+      </Card>
+
+      <Card className="p-4 sm:p-5">
+        <SectionHeader title="Template Collection" subtitle="Preview and open any template in the existing editor flow." />
+        {framesQuery.isLoading ? <LoadingState lines={4} /> : null}
+        {framesQuery.isError ? <ErrorState description="Failed to load frame templates." /> : null}
+        {!framesQuery.isLoading && !framesQuery.isError ? (
+          filteredFrames.length ? (
+            <TemplateGrid>
+              {filteredFrames.map(frame => (
+                <div key={frame.id} className="space-y-2">
+                  <TemplateCard
+                    title={frame.title}
+                    category={frame.category}
+                    description={frame.description}
+                    thumbnailUrl={frame.thumbnailUrl}
+                    tier={frame.tier}
+                    credits={frame.estimatedCredits}
+                    isLocked={frame.isLocked}
+                    onPreview={() => undefined}
+                    onUse={() => undefined}
+                  />
+                  <Link to={`/app/frames/${frame.id}`}>
+                    <Button className="w-full" variant="secondary">Open in editor</Button>
+                  </Link>
+                </div>
+              ))}
+            </TemplateGrid>
+          ) : (
+            <EmptyState title="No templates match your filter" description="Try a different search term or category." />
+          )
+        ) : null}
+      </Card>
+    </>
   );
 }

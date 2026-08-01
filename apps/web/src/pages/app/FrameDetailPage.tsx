@@ -1,8 +1,15 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
-import { ShellCard } from '../../components/ShellCard';
 import { DynamicFrameFields } from '../../components/frame/DynamicFrameFields';
+import { DownloadButton } from '@shared/components/shared/DownloadButton';
+import { PageHeader } from '@shared/components/shared/PageHeader';
+import { SectionHeader } from '@shared/components/shared/SectionHeader';
+import { Badge } from '@shared/components/ui/Badge';
+import { Button } from '@shared/components/ui/Button';
+import { Card } from '@shared/components/ui/Card';
+import { ErrorState } from '@shared/components/ui/ErrorState';
+import { LoadingState } from '@shared/components/ui/LoadingState';
 import { useDynamicFrameFields } from '../../hooks/useDynamicFrameFields';
 import { apiGetFrame } from '../../lib/api';
 import { exportFrameInputsAsImage } from '../../lib/frameInputImageExport';
@@ -37,13 +44,15 @@ export function FrameDetailPage() {
   const dynamicFields = frame?.dynamicFields ?? [];
   const dynamicFieldState = useDynamicFrameFields(dynamicFields);
   const [saveNote, setSaveNote] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   if (frameQuery.isLoading) {
-    return <ShellCard title="Loading frame" subtitle="Fetching latest frame data..." />;
+    return <LoadingState lines={4} />;
   }
 
   if (!frame || frameQuery.isError) {
-    return <ShellCard title="Frame not found" subtitle="This frame may be unpublished or moved." />;
+    return <ErrorState title="Frame not found" description="This frame may be unpublished or moved." />;
   }
 
   const pickFromProfile = () => {
@@ -93,34 +102,50 @@ export function FrameDetailPage() {
   };
 
   const downloadFilledData = async () => {
+    setDownloadError(null);
+    setIsDownloading(true);
     const safeTitle = frame.title.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'frame';
-    await exportFrameInputsAsImage({
-      filename: `${safeTitle}-inputs.png`,
-      frameTitle: frame.title,
-      backgroundUrl: frame.thumbnailUrl,
-      templateLayers: frame.templateLayers,
-      renderSize: frame.renderSize,
-      fields: dynamicFields,
-      values: dynamicFieldState.values,
-    });
+    try {
+      await exportFrameInputsAsImage({
+        filename: `${safeTitle}-inputs.png`,
+        frameTitle: frame.title,
+        backgroundUrl: frame.thumbnailUrl,
+        templateLayers: frame.templateLayers,
+        renderSize: frame.renderSize,
+        fields: dynamicFields,
+        values: dynamicFieldState.values,
+      });
+    } catch (error) {
+      setDownloadError(error instanceof Error ? error.message : 'Download failed.');
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
     <>
-      <ShellCard title={frame.title} subtitle={`${frame.category} • ${frame.tier}`}>
-        <p className="text-sm text-slate-600">{frame.description}</p>
-        {frame.isLocked ? (
-          <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-            This premium frame requires an active subscription before generation.
-          </p>
-        ) : null}
-      </ShellCard>
+      <PageHeader
+        eyebrow="Editor Workspace"
+        title={frame.title}
+        description={frame.description}
+        actions={
+          <>
+            <Badge variant={frame.tier === 'PREMIUM' ? 'warning' : 'success'}>{frame.tier}</Badge>
+            <Badge variant="default">{frame.category}</Badge>
+          </>
+        }
+      />
 
-      <ShellCard title="Dynamic Placeholders" subtitle="Rendered from frame schema at runtime.">
+      {frame.isLocked ? (
+        <ErrorState title="Subscription required" description="This premium frame requires an active subscription before generation." />
+      ) : null}
+
+      <Card className="p-4 sm:p-5">
+        <SectionHeader title="Dynamic placeholders" subtitle="Populate text and image fields, then preview/download using existing rendering logic." />
         <form className="grid gap-3 md:grid-cols-2">
-          <button className="btn-secondary md:col-span-2" type="button" onClick={pickFromProfile}>
-            Pick from profile
-          </button>
+          <Button className="md:col-span-2" variant="secondary" type="button" onClick={pickFromProfile}>
+            Autofill from profile
+          </Button>
 
           <DynamicFrameFields
             fields={dynamicFields}
@@ -136,16 +161,15 @@ export function FrameDetailPage() {
           />
 
           <div className="md:col-span-2 flex flex-wrap gap-2">
-            <button className="btn-primary" type="button" onClick={saveDraft}>
-              Save as project
-            </button>
-            <button className="btn-secondary" type="button" onClick={downloadFilledData}>
+            <Button type="button" onClick={saveDraft}>Save as project</Button>
+            <DownloadButton type="button" variant="secondary" isDownloading={isDownloading} onClick={downloadFilledData}>
               Download as image
-            </button>
+            </DownloadButton>
           </div>
-          {saveNote ? <p className="md:col-span-2 text-sm text-teal-700">{saveNote}</p> : null}
+          {saveNote ? <p className="md:col-span-2 text-sm text-[var(--color-success-700)]">{saveNote}</p> : null}
+          {downloadError ? <p className="md:col-span-2 text-sm text-[var(--color-danger-700)]">{downloadError}</p> : null}
         </form>
-      </ShellCard>
+      </Card>
     </>
   );
 }

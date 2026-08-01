@@ -1,5 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ShellCard } from '../../components/ShellCard';
+import { PageHeader } from '@shared/components/shared/PageHeader';
+import { SectionHeader } from '@shared/components/shared/SectionHeader';
+import { Badge } from '@shared/components/ui/Badge';
+import { Button } from '@shared/components/ui/Button';
+import { Card } from '@shared/components/ui/Card';
+import { ErrorState } from '@shared/components/ui/ErrorState';
+import { LoadingState } from '@shared/components/ui/LoadingState';
 import {
   apiConfirmRechargeOrder,
   apiCreateRechargeOrder,
@@ -34,8 +40,15 @@ export function WalletPage() {
 
   return (
     <>
-      <ShellCard title="Wallet" subtitle="Credit balance and top-up plans.">
-        {summaryQuery.isLoading ? <p className="mb-3 text-sm text-slate-500">Loading wallet...</p> : null}
+      <PageHeader
+        eyebrow="Credits and Billing"
+        title="Wallet"
+        description="Track balance, recharge credits, and monitor ledger activity with clear status feedback."
+      />
+
+      <Card className="p-4 sm:p-5">
+        <SectionHeader title="Balance Overview" subtitle="Live credit balances from the wallet summary endpoint." />
+        {summaryQuery.isLoading ? <LoadingState lines={1} /> : null}
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-xl border border-teal-100 bg-teal-50 p-4">
             <p className="text-xs uppercase tracking-[0.16em] text-teal-700">Available</p>
@@ -50,33 +63,31 @@ export function WalletPage() {
             <p className="mt-1 text-2xl font-semibold text-slate-900">{summary?.lowBalanceThreshold ?? 0}</p>
           </div>
         </div>
-      </ShellCard>
+      </Card>
 
-      <ShellCard title="Recharge Plans" subtitle="Choose a plan and top up your credits.">
-        {plansQuery.isLoading ? <p className="mb-3 text-sm text-slate-500">Loading plans...</p> : null}
-        {plansQuery.isError ? <p className="mb-3 text-sm text-rose-700">Failed to load plans.</p> : null}
+      <Card className="p-4 sm:p-5">
+        <SectionHeader title="Recharge Plans" subtitle="Choose a plan and top up your credits." />
+        {plansQuery.isLoading ? <LoadingState lines={3} /> : null}
+        {plansQuery.isError ? <ErrorState description="Failed to load plans." /> : null}
         <div className="grid gap-3 md:grid-cols-3">
           {plans.map(plan => (
             <article key={plan.id} className="rounded-xl border border-slate-200 p-4">
               <p className="text-sm font-semibold text-slate-900">INR {plan.amountInr}</p>
               <p className="text-xs text-slate-500">Credits: {plan.credits} + Bonus: {plan.bonus}</p>
-              <button
-                className="btn-soft mt-3"
-                type="button"
-                onClick={() => rechargeMutation.mutate(plan.id)}
-              >
+              <Button className="mt-3" variant="secondary" size="sm" type="button" onClick={() => rechargeMutation.mutate(plan.id)}>
                 Recharge
-              </button>
+              </Button>
             </article>
           ))}
         </div>
         {rechargeMutation.isPending ? <p className="mt-3 text-sm text-slate-500">Processing recharge...</p> : null}
-        {rechargeMutation.isError ? <p className="mt-3 text-sm text-rose-700">Recharge failed.</p> : null}
-      </ShellCard>
+        {rechargeMutation.isError ? <ErrorState description="Recharge failed." /> : null}
+      </Card>
 
-      <ShellCard title="Transactions" subtitle="Append-only ledger history.">
-        {ledgerQuery.isLoading ? <p className="mb-3 text-sm text-slate-500">Loading ledger...</p> : null}
-        {ledgerQuery.isError ? <p className="mb-3 text-sm text-rose-700">Failed to load ledger.</p> : null}
+      <Card className="p-4 sm:p-5">
+        <SectionHeader title="Transactions" subtitle="Append-only ledger history." />
+        {ledgerQuery.isLoading ? <LoadingState lines={4} /> : null}
+        {ledgerQuery.isError ? <ErrorState description="Failed to load ledger." /> : null}
         <div className="space-y-2">
           {txns.map(txn => (
             <div key={txn.id} className="flex items-center justify-between rounded-xl border border-slate-200 p-3">
@@ -90,7 +101,8 @@ export function WalletPage() {
             </div>
           ))}
         </div>
-      </ShellCard>
+        {!ledgerQuery.isLoading && !txns.length ? <Badge variant="default">No transactions yet</Badge> : null}
+      </Card>
     </>
   );
 }

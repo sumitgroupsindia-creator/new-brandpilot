@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ShellCard } from '../../components/ShellCard';
 import { DynamicFrameFields } from '../../components/frame/DynamicFrameFields';
+import { PageHeader } from '@shared/components/shared/PageHeader';
+import { SectionHeader } from '@shared/components/shared/SectionHeader';
+import { Button } from '@shared/components/ui/Button';
+import { Card } from '@shared/components/ui/Card';
 import { useDynamicFrameFields } from '../../hooks/useDynamicFrameFields';
 import {
   apiCreateGenerationJob,
@@ -276,7 +279,14 @@ export function GeneratePage() {
 
   return (
     <>
-      <ShellCard title="Compose Asset" subtitle="Pick a base image from a category or subcategory, then place a frame over it and fill the required values.">
+      <PageHeader
+        eyebrow="AI Compose"
+        title="Compose and queue branded assets"
+        description="Pick image + frame, fill dynamic values, preview, and queue generation using existing backend logic."
+      />
+
+      <Card className="p-4 sm:p-5">
+        <SectionHeader title="Composition Setup" subtitle="Keep your current generation behavior with a cleaner workspace." />
         <div className="mb-4 rounded-[24px] border border-teal-100 bg-teal-50/80 p-4">
           <div className="flex flex-wrap gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-teal-700">
             <span className="rounded-full bg-white px-2.5 py-1">1. Pick image</span>
@@ -450,15 +460,16 @@ export function GeneratePage() {
             value={negativePrompt}
             onChange={event => setNegativePrompt(event.target.value)}
           />
-          <button className="btn-primary md:col-span-2" type="button" onClick={onQueueGeneration}>
-            {createJobMutation.isPending ? 'Queue composition' : 'Queue composition'}
-          </button>
+          <Button className="md:col-span-2" type="button" onClick={onQueueGeneration} loading={createJobMutation.isPending}>
+            Queue composition
+          </Button>
           {submissionError ? <p className="text-sm text-amber-700">{submissionError}</p> : null}
           {createJobMutation.isError ? <p className="text-sm text-rose-700">Failed to queue job.</p> : null}
         </form>
-      </ShellCard>
+      </Card>
 
-      <ShellCard title="Composition Status" subtitle="Queued and running jobs for your image-and-frame compositions.">
+      <Card className="p-4 sm:p-5">
+        <SectionHeader title="Composition Status" subtitle="Queued and running jobs for your image-and-frame compositions." />
         {jobsQuery.isLoading ? <p className="mb-3 text-sm text-slate-500">Loading jobs...</p> : null}
         <div className="space-y-3">
           {jobs.map(job => (
@@ -468,7 +479,7 @@ export function GeneratePage() {
             </div>
           ))}
         </div>
-      </ShellCard>
+      </Card>
     </>
   );
 }

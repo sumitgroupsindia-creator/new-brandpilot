@@ -1,8 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ShellCard } from '../../components/ShellCard';
 import { DynamicFrameFields } from '../../components/frame/DynamicFrameFields';
+import { CategoryCard } from '@shared/components/shared/CategoryCard';
+import { CategoryGrid } from '@shared/components/shared/CategoryGrid';
+import { DownloadButton } from '@shared/components/shared/DownloadButton';
+import { PageHeader } from '@shared/components/shared/PageHeader';
+import { SectionHeader } from '@shared/components/shared/SectionHeader';
+import { TemplateCard } from '@shared/components/shared/TemplateCard';
+import { Badge } from '@shared/components/ui/Badge';
+import { Button } from '@shared/components/ui/Button';
+import { Card } from '@shared/components/ui/Card';
+import { EmptyState } from '@shared/components/ui/EmptyState';
+import { Modal } from '@shared/components/ui/Modal';
+import { SearchInput } from '@shared/components/ui/SearchInput';
 import { useDynamicFrameFields } from '../../hooks/useDynamicFrameFields';
 import { apiGetFrame, apiGetFrames, apiGetImageCategories } from '../../lib/api';
 import { exportFrameInputsAsImage, renderFrameInputsPreview } from '../../lib/frameInputImageExport';
@@ -78,6 +89,9 @@ export function CategoriesPage() {
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState('');
   const [selectedImageId, setSelectedImageId] = useState('');
   const [selectedFrameId, setSelectedFrameId] = useState('');
+  const [categorySearch, setCategorySearch] = useState('');
+  const [imageSearch, setImageSearch] = useState('');
+  const [frameSearch, setFrameSearch] = useState('');
   const [isComposerOpen, setIsComposerOpen] = useState(false);
 
   const categories = useMemo(
@@ -92,6 +106,12 @@ export function CategoriesPage() {
   );
 
   const rootCategories = categories;
+
+  const filteredRootCategories = useMemo(() => {
+    const query = categorySearch.trim().toLowerCase();
+    if (!query) return rootCategories;
+    return rootCategories.filter(category => category.name.toLowerCase().includes(query));
+  }, [rootCategories, categorySearch]);
 
   const subcategoriesByParent = useMemo(() => {
     const grouped = new Map<string, ImageCategoryNode[]>();
@@ -125,8 +145,23 @@ export function CategoriesPage() {
   }, [selectedRoot, visibleSubcategories, selectedSubcategoryId]);
 
   const visibleImages = selectedLeafCategory?.images ?? [];
+  const filteredVisibleImages = useMemo(() => {
+    const query = imageSearch.trim().toLowerCase();
+    if (!query) return visibleImages;
+    return visibleImages.filter(image => image.name.toLowerCase().includes(query));
+  }, [visibleImages, imageSearch]);
   const selectedImage = visibleImages.find(image => image.id === selectedImageId) ?? null;
   const frames = framesQuery.data ?? [];
+  const filteredFrames = useMemo(() => {
+    const query = frameSearch.trim().toLowerCase();
+    if (!query) return frames;
+    return frames.filter(frame => {
+      return (
+        frame.title.toLowerCase().includes(query)
+        || frame.category.toLowerCase().includes(query)
+      );
+    });
+  }, [frames, frameSearch]);
   const selectedFrameSummary = frames.find(frame => frame.id === selectedFrameId) ?? null;
   const frameDetailQuery = useQuery({
     queryKey: ['frame', selectedFrameId],
@@ -369,342 +404,218 @@ export function CategoriesPage() {
     dynamicFieldState.values.imagePreviewUrl,
   ]);
 
-  const stepStates = {
-    category: Boolean(selectedRoot),
-    image: Boolean(selectedImage),
-    frame: Boolean(selectedFrame),
-    values: Boolean(selectedFrame) && areFrameValuesFilled,
-  };
-
   const totalCategories = rootCategories.length;
   const totalImages = visibleImages.length;
   const totalFrames = frames.length;
 
   return (
     <>
-      <ShellCard title="Creative Composition Studio" subtitle="Category se image choose karo, frame apply karo, values fill karo, aur final artwork download karo.">
-        <div className="space-y-6">
-          <section className="rounded-3xl border border-slate-200 bg-gradient-to-r from-slate-900 via-slate-800 to-teal-900 p-5 text-white">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-teal-100">Guided Flow</p>
-                <h3 className="mt-1 text-xl font-semibold">Pro Category Composer</h3>
-                <p className="mt-1 text-sm text-slate-200">Is panel mein step-by-step selection karo. Har step clear status ke saath show hoga.</p>
-              </div>
-              <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-teal-100">
-                2026 Studio UX
-              </div>
-            </div>
+      <PageHeader
+        eyebrow="Discover • Select • Customize"
+        title="Category-driven creation workspace"
+        description="Use your existing business flow with a redesigned interface that surfaces recommendations, clear progress, and a focused composition studio."
+        actions={<Link to="/app/frames"><Button variant="secondary">Template Library</Button></Link>}
+      >
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-3">
+            <p className="text-xs uppercase tracking-[0.1em] text-[var(--color-ink-subtle)]">Categories</p>
+            <p className="mt-1 text-xl font-semibold text-[var(--color-ink)]">{totalCategories}</p>
+          </div>
+          <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-3">
+            <p className="text-xs uppercase tracking-[0.1em] text-[var(--color-ink-subtle)]">Images in view</p>
+            <p className="mt-1 text-xl font-semibold text-[var(--color-ink)]">{totalImages}</p>
+          </div>
+          <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-3">
+            <p className="text-xs uppercase tracking-[0.1em] text-[var(--color-ink-subtle)]">Templates</p>
+            <p className="mt-1 text-xl font-semibold text-[var(--color-ink)]">{totalFrames}</p>
+          </div>
+        </div>
+      </PageHeader>
 
-            <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-              <div className={`rounded-xl border px-3 py-2 ${stepStates.category ? 'border-emerald-300/70 bg-emerald-300/20' : 'border-white/20 bg-white/5'}`}>
-                <p className="text-[10px] uppercase tracking-[0.22em] text-slate-200">Step 1</p>
-                <p className="text-sm font-medium">Category</p>
-              </div>
-              <div className={`rounded-xl border px-3 py-2 ${stepStates.image ? 'border-emerald-300/70 bg-emerald-300/20' : 'border-white/20 bg-white/5'}`}>
-                <p className="text-[10px] uppercase tracking-[0.22em] text-slate-200">Step 2</p>
-                <p className="text-sm font-medium">Image</p>
-              </div>
-              <div className={`rounded-xl border px-3 py-2 ${stepStates.frame ? 'border-emerald-300/70 bg-emerald-300/20' : 'border-white/20 bg-white/5'}`}>
-                <p className="text-[10px] uppercase tracking-[0.22em] text-slate-200">Step 3</p>
-                <p className="text-sm font-medium">Frame</p>
-              </div>
-              <div className={`rounded-xl border px-3 py-2 ${stepStates.values ? 'border-emerald-300/70 bg-emerald-300/20' : 'border-white/20 bg-white/5'}`}>
-                <p className="text-[10px] uppercase tracking-[0.22em] text-slate-200">Step 4</p>
-                <p className="text-sm font-medium">Values + Download</p>
-              </div>
-            </div>
-          </section>
+      <Card className="p-4 sm:p-5">
+        <SectionHeader title="Step 1: Choose Category" subtitle="Search and select from admin-synced image categories." />
+        <SearchInput placeholder="Search categories" value={categorySearch} onChange={event => setCategorySearch(event.target.value)} />
+        <div className="mt-3">
+          {filteredRootCategories.length ? (
+            <CategoryGrid>
+              {filteredRootCategories.map(category => (
+                <CategoryCard
+                  key={category.id}
+                  name={category.name}
+                  imageUrl={category.images[0]?.url}
+                  countLabel={`${category.images.length} images`}
+                  selected={selectedRoot?.id === category.id}
+                  onClick={() => {
+                    setSelectedCategoryId(category.id);
+                    setSelectedSubcategoryId('');
+                    setSelectedImageId('');
+                    setSelectedFrameId('');
+                  }}
+                />
+              ))}
+            </CategoryGrid>
+          ) : (
+            <EmptyState title="No categories found" description="Try a different search term." />
+          )}
+        </div>
+      </Card>
 
-          <section className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Categories</p>
-              <p className="mt-1 text-lg font-semibold text-slate-900">{totalCategories}</p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Images in selection</p>
-              <p className="mt-1 text-lg font-semibold text-slate-900">{totalImages}</p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Frames available</p>
-              <p className="mt-1 text-lg font-semibold text-slate-900">{totalFrames}</p>
-            </div>
-          </section>
+      {selectedRoot ? (
+        <Card className="p-4 sm:p-5">
+          <SectionHeader title={`Step 2: Pick an Image (${selectedRoot.name})`} subtitle="Optional subcategories and searchable image gallery." />
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-base font-semibold text-slate-900">1. Select Category</h3>
-              <span className="text-xs font-medium text-slate-500">Admin synced categories</span>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {rootCategories.map(category => {
-                const isActive = selectedRoot?.id === category.id;
+          {visibleSubcategories.length ? (
+            <div className="mb-3 flex flex-wrap gap-2">
+              {visibleSubcategories.map(subcategory => {
+                const isActive = selectedLeafCategory?.id === subcategory.id;
                 return (
-                  <button
-                    key={category.id}
-                    type="button"
+                  <Button
+                    key={subcategory.id}
+                    variant={isActive ? 'primary' : 'secondary'}
+                    size="sm"
                     onClick={() => {
-                      setSelectedCategoryId(category.id);
-                      setSelectedSubcategoryId('');
+                      setSelectedSubcategoryId(subcategory.id);
                       setSelectedImageId('');
                       setSelectedFrameId('');
                     }}
-                    className={`rounded-2xl border p-4 text-left transition ${
-                      isActive
-                        ? 'border-teal-500 bg-gradient-to-br from-teal-50 to-emerald-50 shadow-sm'
-                        : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
-                    }`}
                   >
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500">Rank {category.sortOrder}</p>
-                    <p className="mt-2 text-base font-semibold text-slate-900">{category.name}</p>
-                    <p className="mt-1 text-xs text-slate-600">{category.images.length} direct images</p>
-                  </button>
+                    {subcategory.name}
+                  </Button>
                 );
               })}
-              {!rootCategories.length ? <p className="text-sm text-slate-500">No categories available.</p> : null}
             </div>
-          </section>
-
-          {selectedRoot ? (
-            <section className="rounded-3xl border border-slate-200 bg-white p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-base font-semibold text-slate-900">2. Pick Image ({selectedRoot.name})</h3>
-                <span className="text-xs font-medium text-slate-500">Category ke baad image selection</span>
-              </div>
-
-              {visibleSubcategories.length ? (
-                <div className="mb-4 flex flex-wrap gap-2">
-                  {visibleSubcategories.map(subcategory => {
-                    const isActive = selectedLeafCategory?.id === subcategory.id;
-                    return (
-                      <button
-                        key={subcategory.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedSubcategoryId(subcategory.id);
-                          setSelectedImageId('');
-                          setSelectedFrameId('');
-                        }}
-                        className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-                          isActive
-                            ? 'border-teal-500 bg-teal-50 text-teal-800'
-                            : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'
-                        }`}
-                      >
-                        {subcategory.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : null}
-
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {visibleImages.map(image => {
-                  const isActive = image.id === selectedImageId;
-                  return (
-                    <button
-                      key={image.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedImageId(image.id);
-                        setSelectedFrameId('');
-                      }}
-                      className={`group overflow-hidden rounded-2xl border text-left transition ${
-                        isActive
-                          ? 'border-teal-500 ring-2 ring-teal-100 shadow-sm'
-                          : 'border-slate-200 hover:border-slate-300 hover:shadow-sm'
-                      }`}
-                    >
-                      <img src={image.url} alt={image.name} className="h-36 w-full object-cover transition group-hover:scale-[1.01]" loading="lazy" />
-                      <div className="p-3">
-                        <p className="truncate text-sm font-semibold text-slate-900">{image.name}</p>
-                        <p className="mt-1 text-xs text-slate-500">Click to continue with frames</p>
-                      </div>
-                    </button>
-                  );
-                })}
-                {!visibleImages.length ? <p className="text-sm text-slate-500">No images in this category.</p> : null}
-              </div>
-            </section>
           ) : null}
 
-          {selectedImage ? (
-            <section className="rounded-3xl border border-slate-200 bg-white p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-base font-semibold text-slate-900">3. Frame Composer Modal</h3>
-                  <p className="mt-1 text-sm text-slate-600">
-                    Next steps ek focused modal mein open honge: frame selection, values fill, live preview, download.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Link className="text-xs font-semibold text-teal-700 underline" to="/app/frames">
-                    Open full frame library
-                  </Link>
-                  <button className="btn-primary" type="button" onClick={() => setIsComposerOpen(true)}>
-                    Open Composer
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                <div className="flex items-center gap-3">
-                  <img src={selectedImage.url} alt={selectedImage.name} className="h-16 w-16 rounded-xl object-cover" />
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Selected image</p>
-                    <p className="text-sm font-semibold text-slate-900">{selectedImage.name}</p>
-                  </div>
-                </div>
-              </div>
-            </section>
-          ) : null}
-        </div>
-      </ShellCard>
-
-      {isComposerOpen && selectedImage ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6">
-          <div className="max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600">Sub Modal Composer</p>
-                <h3 className="mt-1 text-xl font-semibold text-slate-900">{selectedImage.name}</h3>
-                <p className="mt-1 text-sm text-slate-600">Frame choose karo, values fill karo, live preview dekho, then final download karo.</p>
-              </div>
+          <SearchInput placeholder="Search images in selected category" value={imageSearch} onChange={event => setImageSearch(event.target.value)} />
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {filteredVisibleImages.map(image => (
               <button
+                key={image.id}
                 type="button"
-                className="rounded-xl border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
-                onClick={() => setIsComposerOpen(false)}
+                onClick={() => {
+                  setSelectedImageId(image.id);
+                  setSelectedFrameId('');
+                }}
+                className={`overflow-hidden rounded-[var(--radius-lg)] border text-left transition ${
+                  selectedImageId === image.id
+                    ? 'border-[var(--color-brand-500)] ring-2 ring-cyan-100'
+                    : 'border-[var(--color-border)] hover:border-[var(--color-border-strong)]'
+                }`}
               >
-                Close
+                <img src={image.url} alt={image.name} className="h-36 w-full object-cover" loading="lazy" />
+                <div className="p-3">
+                  <p className="truncate text-sm font-semibold text-[var(--color-ink)]">{image.name}</p>
+                  <p className="mt-1 text-xs text-[var(--color-ink-subtle)]">Select to continue</p>
+                </div>
               </button>
+            ))}
+          </div>
+          {!filteredVisibleImages.length ? <div className="mt-3"><EmptyState title="No images found" description="Try a different search or subcategory." /></div> : null}
+        </Card>
+      ) : null}
+
+      {selectedImage ? (
+        <Card className="p-4 sm:p-5">
+          <SectionHeader title="Step 3: Open Composition Studio" subtitle="Launch template selection, customization, live preview, and download in one focused workspace." />
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3">
+            <div className="flex items-center gap-3">
+              <img src={selectedImage.url} alt={selectedImage.name} className="h-14 w-14 rounded-[var(--radius-md)] object-cover" />
+              <div>
+                <p className="text-xs uppercase tracking-[0.1em] text-[var(--color-ink-subtle)]">Selected image</p>
+                <p className="text-sm font-semibold text-[var(--color-ink)]">{selectedImage.name}</p>
+              </div>
             </div>
-
-            <div className="grid gap-5 xl:grid-cols-[1.35fr_1fr]">
-              <section className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="mb-3 flex items-center justify-between">
-                  <h4 className="text-sm font-semibold text-slate-900">Choose Frame</h4>
-                  <span className="text-xs text-slate-500">{frames.length} available</span>
-                </div>
-
-                {framesQuery.isLoading ? <p className="text-sm text-slate-500">Loading frames...</p> : null}
-                {selectedFrameId && frameDetailQuery.isLoading ? <p className="text-xs text-slate-500">Loading full frame template...</p> : null}
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {frames.map(frame => {
-                    const isActive = selectedFrameId === frame.id;
-                    return (
-                      <button
-                        key={frame.id}
-                        type="button"
-                        onClick={() => setSelectedFrameId(frame.id)}
-                        className={`rounded-2xl border p-3 text-left transition ${
-                          isActive
-                            ? 'border-teal-500 bg-gradient-to-br from-teal-50 to-emerald-50 shadow-sm'
-                            : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
-                        }`}
-                      >
-                        <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500">{frame.tier}</p>
-                        <p className="mt-1 text-sm font-semibold text-slate-900">{frame.title}</p>
-                        <p className="mt-1 text-xs text-slate-600">{frame.category}</p>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {selectedFrame ? (
-                  <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                    <div className="mb-3 flex items-center justify-between">
-                      <h4 className="text-sm font-semibold text-slate-900">Fill Values ({selectedFrame.title})</h4>
-                      <span className="text-xs text-slate-500">Required fields complete karo</span>
-                    </div>
-
-                    <form className="grid gap-3 md:grid-cols-2" onSubmit={event => event.preventDefault()}>
-                      <DynamicFrameFields
-                        fields={frameFields}
-                        values={dynamicFieldState.values}
-                        onTextChange={dynamicFieldState.setTextValue}
-                        onImageSelect={async (key, file) => {
-                          const previewObjectUrl = URL.createObjectURL(file);
-                          dynamicFieldState.setImagePreview(key, previewObjectUrl);
-                          const dataUrl = await fileToDataUrl(file);
-                          dynamicFieldState.setImageData(key, dataUrl);
-                        }}
-                        onImageBackgroundModeChange={dynamicFieldState.setImageBackground}
-                      />
-
-                      {areFrameValuesFilled ? (
-                        <button
-                          className="btn-primary md:col-span-2"
-                          type="button"
-                          onClick={onDownloadFilledFrame}
-                          disabled={isDownloading}
-                        >
-                          {isDownloading ? 'Preparing high-quality export...' : 'Download Final Artwork'}
-                        </button>
-                      ) : (
-                        <p className="md:col-span-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                          Download enable karne ke liye required fields complete karo.
-                        </p>
-                      )}
-
-                      {downloadError ? <p className="md:col-span-2 text-sm text-rose-700">{downloadError}</p> : null}
-                    </form>
-                  </div>
-                ) : null}
-              </section>
-
-              <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="mb-3 flex items-center justify-between">
-                  <h4 className="text-sm font-semibold text-slate-900">Live Preview</h4>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-500">Image + frame + values</span>
-                    {previewRenderMode ? (
-                      <span
-                        className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.15em] ${
-                          previewRenderMode === 'full-template'
-                            ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
-                            : previewRenderMode === 'thumbnail-fallback'
-                              ? 'border-amber-300 bg-amber-50 text-amber-700'
-                              : 'border-slate-300 bg-white text-slate-600'
-                        }`}
-                      >
-                        {previewRenderMode === 'full-template' ? 'Full template' : previewRenderMode === 'thumbnail-fallback' ? 'Thumbnail fallback' : previewRenderMode.replace('-', ' ')}
-                      </span>
-                    ) : null}
-                  </div>
-                </div>
-
-                <p className="mb-2 rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600">
-                  Background source: <span className="font-semibold text-slate-800">{resolvedBackground.source}</span>
-                  {' | '}
-                  Render mode: <span className="font-semibold text-slate-800">{previewRenderMode ?? 'none'}</span>
-                </p>
-
-                {previewDebugSummary ? (
-                  <p className="mb-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] text-amber-800">
-                    Render debug: <span className="font-semibold">{previewDebugSummary}</span>
-                  </p>
-                ) : null}
-
-                {isPreviewRendering ? <p className="text-xs text-slate-500">Rendering preview...</p> : null}
-                {previewError ? <p className="text-xs text-rose-700">{previewError}</p> : null}
-
-                {previewUrl ? (
-                  <img
-                    src={previewUrl}
-                    alt="Composed preview"
-                    className="max-h-[520px] w-full rounded-xl border border-slate-200 object-contain bg-white"
-                  />
-                ) : (
-                  <div className="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">
-                    Frame select karke yahan live preview dekho.
-                  </div>
-                )}
-              </section>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link to="/app/frames"><Button variant="ghost" size="sm">Browse all templates</Button></Link>
+              <Button onClick={() => setIsComposerOpen(true)}>Open Composer</Button>
             </div>
           </div>
-        </div>
+        </Card>
       ) : null}
+
+      <Modal
+        open={isComposerOpen && Boolean(selectedImage)}
+        onClose={() => setIsComposerOpen(false)}
+        title={selectedImage?.name ?? 'Composer'}
+        description="Choose template, fill dynamic fields, preview, and download your final output."
+      >
+        <div className="grid gap-4 xl:grid-cols-[0.95fr_1.2fr_1fr]">
+          <Card className="p-4">
+            <SectionHeader title="Templates" subtitle={`${filteredFrames.length} available`} />
+            <SearchInput placeholder="Search templates" value={frameSearch} onChange={event => setFrameSearch(event.target.value)} />
+            <div className="mt-3 space-y-3">
+              {framesQuery.isLoading ? <p className="text-sm text-[var(--color-ink-subtle)]">Loading templates...</p> : null}
+              {filteredFrames.map(frame => (
+                <TemplateCard
+                  key={frame.id}
+                  title={frame.title}
+                  category={frame.category}
+                  description={frame.description}
+                  thumbnailUrl={frame.thumbnailUrl}
+                  tier={frame.tier}
+                  credits={frame.estimatedCredits}
+                  isLocked={frame.isLocked}
+                  onPreview={() => setSelectedFrameId(frame.id)}
+                  onUse={() => setSelectedFrameId(frame.id)}
+                />
+              ))}
+            </div>
+          </Card>
+
+          <Card className="p-4">
+            <SectionHeader title="Editor" subtitle={selectedFrame ? selectedFrame.title : 'Select a template to customize'} />
+            {selectedFrameId && frameDetailQuery.isLoading ? <p className="mb-2 text-xs text-[var(--color-ink-subtle)]">Loading full frame template...</p> : null}
+            {selectedFrame ? (
+              <form className="grid gap-3 md:grid-cols-2" onSubmit={event => event.preventDefault()}>
+                <DynamicFrameFields
+                  fields={frameFields}
+                  values={dynamicFieldState.values}
+                  onTextChange={dynamicFieldState.setTextValue}
+                  onImageSelect={async (key, file) => {
+                    const previewObjectUrl = URL.createObjectURL(file);
+                    dynamicFieldState.setImagePreview(key, previewObjectUrl);
+                    const dataUrl = await fileToDataUrl(file);
+                    dynamicFieldState.setImageData(key, dataUrl);
+                  }}
+                  onImageBackgroundModeChange={dynamicFieldState.setImageBackground}
+                />
+
+                {areFrameValuesFilled ? (
+                  <DownloadButton className="md:col-span-2" isDownloading={isDownloading} onClick={onDownloadFilledFrame}>
+                    Download Final Artwork
+                  </DownloadButton>
+                ) : (
+                  <p className="md:col-span-2 rounded-[var(--radius-md)] border border-[var(--color-warning-200)] bg-[var(--color-warning-50)] px-3 py-2 text-sm text-[var(--color-warning-700)]">
+                    Complete required fields to enable export.
+                  </p>
+                )}
+
+                {downloadError ? <p className="md:col-span-2 text-sm text-[var(--color-danger-700)]">{downloadError}</p> : null}
+              </form>
+            ) : (
+              <EmptyState title="Template required" description="Select a template from the left panel to start editing." />
+            )}
+          </Card>
+
+          <Card className="p-4">
+            <SectionHeader title="Live Preview" subtitle="Real-time composed output" />
+            <div className="mb-2 flex items-center gap-2 text-xs text-[var(--color-ink-subtle)]">
+              <span>Source: {resolvedBackground.source}</span>
+              {previewRenderMode ? <Badge variant={previewRenderMode === 'full-template' ? 'success' : 'warning'}>{previewRenderMode}</Badge> : null}
+            </div>
+
+            {previewDebugSummary ? <p className="mb-2 rounded-[var(--radius-sm)] border border-[var(--color-warning-200)] bg-[var(--color-warning-50)] px-2 py-1 text-[11px] text-[var(--color-warning-700)]">{previewDebugSummary}</p> : null}
+            {isPreviewRendering ? <p className="text-xs text-[var(--color-ink-subtle)]">Rendering preview...</p> : null}
+            {previewError ? <p className="text-xs text-[var(--color-danger-700)]">{previewError}</p> : null}
+
+            {previewUrl ? (
+              <img src={previewUrl} alt="Composed preview" className="max-h-[560px] w-full rounded-[var(--radius-md)] border border-[var(--color-border)] object-contain bg-white" />
+            ) : (
+              <EmptyState title="Preview pending" description="Select a template and add values to render the preview." />
+            )}
+          </Card>
+        </div>
+      </Modal>
     </>
   );
 }

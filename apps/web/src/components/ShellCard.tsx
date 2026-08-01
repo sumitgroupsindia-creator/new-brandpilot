@@ -1,4 +1,5 @@
 import { PropsWithChildren } from 'react';
+import { cn } from '@shared/lib/cn';
 
 interface ShellCardProps extends PropsWithChildren {
   title?: string;
@@ -9,10 +10,7 @@ interface ShellCardProps extends PropsWithChildren {
 export function ShellCard({ title, subtitle, className, children }: ShellCardProps) {
   return (
     <section
-      className={[
-        'glass-panel p-5 sm:p-6',
-        className ?? '',
-      ].join(' ')}
+      className={cn('rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-white p-5 shadow-[var(--shadow-xs)] sm:p-6', className)}
     >
       {(title || subtitle) && (
         <header className="mb-4">

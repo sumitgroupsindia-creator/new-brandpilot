@@ -303,6 +303,10 @@ export class SubscriptionsService {
   }
 
   async hasPremiumAccess(userId: string, tenantId: string) {
+    if (await this.isSuperAdmin(userId, tenantId)) {
+      return true;
+    }
+
     const enabled = (await this.configService.getBoolean(ConfigKeys.FLAGS_SUBSCRIPTIONS_ENABLED, tenantId)) ?? true;
     if (!enabled) {
       return true;
@@ -330,6 +334,25 @@ export class SubscriptionsService {
         tenantId,
       )) ?? true
     );
+  }
+
+  async isSuperAdmin(userId: string, tenantId: string) {
+    if (this.tenantContext.hasRole('SUPER_ADMIN')) {
+      return true;
+    }
+
+    const userRole = await this.prisma.userRole.findFirst({
+      where: {
+        userId,
+        role: {
+          tenantId,
+          key: 'SUPER_ADMIN',
+        },
+      },
+      select: { userId: true },
+    });
+
+    return Boolean(userRole);
   }
 
   async handleRazorpaySubscriptionWebhook(

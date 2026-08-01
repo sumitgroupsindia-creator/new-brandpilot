@@ -31,4 +31,8 @@ export class TenantContextService {
       store.tenantId = tenantId;
     }
   }
+
+	 hasRole(role: string): boolean {
+		 return this.get()?.roles?.includes(role) ?? false;
+	 }
 }

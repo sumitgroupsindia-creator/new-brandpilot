@@ -65,6 +65,7 @@ export class GenerationService {
     if (!tenantId) {
       throw new BadRequestException('Tenant context is required');
     }
+    const isSuperAdmin = await this.subscriptionsService.isSuperAdmin(userId, tenantId);
 
     const existing = await this.idempotency.findExisting(idempotencyKey, tenantId, userId);
     if (existing) {
@@ -104,7 +105,7 @@ export class GenerationService {
     const selectedImage = input.imageId ? await this.findActiveImageById(tenantId, input.imageId) : null;
     const requiresPremiumAccess = frame.tier === FrameTier.PREMIUM || selectedImage?.tier === 'PREMIUM';
     const hasPremiumAccess = requiresPremiumAccess
-      ? await this.subscriptionsService.hasPremiumAccess(userId, tenantId)
+      ? (isSuperAdmin || await this.subscriptionsService.hasPremiumAccess(userId, tenantId))
       : false;
 
     if (frame.tier === FrameTier.PREMIUM && !hasPremiumAccess) {
@@ -133,17 +134,21 @@ export class GenerationService {
       ? Math.max(0, Math.floor(Number(selectedImage.estimatedCredits ?? 0)))
       : 0;
 
-    const debitCredits =
-      (frameAlreadyUnlocked ? 0 : frameUnlockCredits) +
-      (selectedImage && !imageAlreadyUnlocked ? imageUnlockCredits : 0);
+    const debitCredits = isSuperAdmin
+      ? 0
+      : (frameAlreadyUnlocked ? 0 : frameUnlockCredits) +
+        (selectedImage && !imageAlreadyUnlocked ? imageUnlockCredits : 0);
 
-    const wallet = await this.prisma.walletTransaction.aggregate({
-      where: { tenantId, userId },
-      _sum: { amount: true },
-    });
-    const balance = wallet._sum.amount ?? 0;
-    if (balance < debitCredits) {
-      throw new BadRequestException('Insufficient credits');
+    let balance = 0;
+    if (!isSuperAdmin) {
+      const wallet = await this.prisma.walletTransaction.aggregate({
+        where: { tenantId, userId },
+        _sum: { amount: true },
+      });
+      balance = wallet._sum.amount ?? 0;
+      if (balance < debitCredits) {
+        throw new BadRequestException('Insufficient credits');
+      }
     }
 
     const nowLabel = new Date().toISOString().replace('T', ' ').slice(0, 16);
@@ -269,22 +274,24 @@ export class GenerationService {
       idempotent: false,
     };
 
-    const remainingBalance = balance - debitCredits;
-    const threshold =
-      (await this.configService.getNumber(ConfigKeys.BILLING_LOW_BALANCE_THRESHOLD, tenantId)) ?? 20;
-    if (balance > threshold && remainingBalance <= threshold) {
-      await this.notifications.emit({
-        tenantId,
-        userId,
-        eventKey: NotificationEventKey.WALLET_LOW_BALANCE,
-        title: 'Wallet running low',
-        body: `Your balance is now ${remainingBalance} credits. Please recharge soon.`,
-        metadata: {
-          balance: remainingBalance,
-          threshold,
-          assetId: result.id,
-        } as Prisma.InputJsonValue,
-      });
+    if (!isSuperAdmin) {
+      const remainingBalance = balance - debitCredits;
+      const threshold =
+        (await this.configService.getNumber(ConfigKeys.BILLING_LOW_BALANCE_THRESHOLD, tenantId)) ?? 20;
+      if (balance > threshold && remainingBalance <= threshold) {
+        await this.notifications.emit({
+          tenantId,
+          userId,
+          eventKey: NotificationEventKey.WALLET_LOW_BALANCE,
+          title: 'Wallet running low',
+          body: `Your balance is now ${remainingBalance} credits. Please recharge soon.`,
+          metadata: {
+            balance: remainingBalance,
+            threshold,
+            assetId: result.id,
+          } as Prisma.InputJsonValue,
+        });
+      }
     }
 
     await this.idempotency.save(

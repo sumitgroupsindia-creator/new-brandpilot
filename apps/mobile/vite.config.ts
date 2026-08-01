@@ -7,6 +7,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@brandpilot/web': path.resolve(__dirname, '../web/src'),
+      '@brandpilot/shared': path.resolve(__dirname, '../../packages/shared/src/index.ts'),
     },
   },
   build: {

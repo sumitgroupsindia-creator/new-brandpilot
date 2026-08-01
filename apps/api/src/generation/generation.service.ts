@@ -540,6 +540,7 @@ export class GenerationService {
       createdAt: asset.createdAt.toISOString(),
       creditsUsed: asset.creditsUsed,
       status: asset.status,
+      outputUrl: asset.outputUrl,
     }));
   }
 
@@ -566,6 +567,7 @@ export class GenerationService {
       createdAt: asset.createdAt.toISOString(),
       creditsUsed: asset.creditsUsed,
       status: asset.status,
+      outputUrl: asset.outputUrl,
     };
   }
 

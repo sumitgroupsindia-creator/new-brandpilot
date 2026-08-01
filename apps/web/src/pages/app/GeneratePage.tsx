@@ -12,6 +12,17 @@ import {
   apiGetGenerationJobs,
 } from '../../lib/api';
 
+function downloadGeneratedAsset(url: string, fileName: string) {
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.target = '_blank';
+  anchor.rel = 'noopener';
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+}
+
 function fileToDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -253,8 +264,23 @@ export function GeneratePage() {
                 {kind === 'VIDEO' ? 'Generate Pro Video' : 'Generate Pro Image'}
               </Button>
               {latestImageJob ? (
-                <Button type="button" variant="secondary" className="min-w-[220px] rounded-full">
-                  Last generated image
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="min-w-[220px] rounded-full"
+                  onClick={() => {
+                    if (latestImageJob.outputUrl) {
+                      downloadGeneratedAsset(latestImageJob.outputUrl, `${latestImageJob.title || 'generated-image'}.png`);
+                      return;
+                    }
+                    showToast({
+                      title: 'Image not ready',
+                      description: 'The latest generated image does not have a downloadable output yet.',
+                      tone: 'warning',
+                    });
+                  }}
+                >
+                  Save last image
                 </Button>
               ) : null}
             </div>
@@ -272,13 +298,32 @@ export function GeneratePage() {
               </div>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {imageJobs.slice(0, 4).map((job, index) => (
-                  <div key={job.id} className="ai-gallery-thumb">
-                    <div className="ai-gallery-thumb-art" />
+                  <button
+                    key={job.id}
+                    type="button"
+                    className="ai-gallery-thumb text-left"
+                    onClick={() => {
+                      if (!job.outputUrl) {
+                        showToast({
+                          title: 'Preview not ready',
+                          description: 'This generation has no stored image output yet.',
+                          tone: 'warning',
+                        });
+                        return;
+                      }
+                      downloadGeneratedAsset(job.outputUrl, `${job.title || 'generated-image'}-${job.id}.png`);
+                    }}
+                  >
+                    {job.outputUrl && job.status === 'SUCCEEDED' ? (
+                      <img src={job.outputUrl} alt={job.title} className="ai-gallery-thumb-image" />
+                    ) : (
+                      <div className="ai-gallery-thumb-art" />
+                    )}
                     <div className="ai-gallery-thumb-meta">
                       <span>#{imageJobs.length - index}</span>
                       <span>{job.status}</span>
                     </div>
-                  </div>
+                  </button>
                 ))}
                 {!imageJobs.length ? (
                   <div className="col-span-full rounded-[12px] border border-dashed border-[var(--color-border)] p-3 text-xs text-[var(--color-ink-subtle)]">
@@ -294,7 +339,22 @@ export function GeneratePage() {
           <Card variant="elevated" className="p-4 sm:p-5">
             <SectionHeader title="Generated Image" subtitle="Preview area for latest image result." />
             <div className="ai-preview-board min-h-[360px]">
-              <p>{latestImageJob ? `Latest image job: ${latestImageJob.title}` : 'No generated image yet'}</p>
+              {latestImageJob?.outputUrl && latestImageJob.status === 'SUCCEEDED' ? (
+                <div className="ai-preview-media-shell">
+                  <img src={latestImageJob.outputUrl} alt={latestImageJob.title} className="ai-preview-media-image" />
+                  <div className="mt-3 flex flex-wrap justify-center gap-2">
+                    <Button
+                      type="button"
+                      className="rounded-full border-0 bg-[linear-gradient(135deg,#ff7a18,#f23686_56%,#7a5cff)] text-white hover:opacity-95"
+                      onClick={() => downloadGeneratedAsset(latestImageJob.outputUrl ?? '', `${latestImageJob.title || 'generated-image'}.png`)}
+                    >
+                      Save generated image
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p>{latestImageJob ? `Latest image job: ${latestImageJob.title}` : 'No generated image yet'}</p>
+              )}
             </div>
           </Card>
 

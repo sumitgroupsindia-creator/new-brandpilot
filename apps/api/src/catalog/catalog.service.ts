@@ -158,6 +158,7 @@ export class CatalogService {
       createdAt: asset.createdAt.toISOString(),
       creditsUsed: asset.creditsUsed,
       status: asset.status,
+      outputUrl: asset.outputUrl,
     }));
   }
 

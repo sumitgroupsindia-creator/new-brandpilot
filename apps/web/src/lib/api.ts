@@ -233,6 +233,7 @@ export interface AssetResponse {
   createdAt: string;
   creditsUsed: number;
   status: 'SUCCEEDED' | 'FAILED' | 'RUNNING' | 'QUEUED';
+  outputUrl?: string | null;
 }
 
 export interface ProjectResponse {

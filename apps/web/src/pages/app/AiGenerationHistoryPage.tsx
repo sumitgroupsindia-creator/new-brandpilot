@@ -44,6 +44,9 @@ export function AiGenerationHistoryPage() {
                         {job.status}
                       </Badge>
                     </div>
+                    {job.outputUrl && job.status === 'SUCCEEDED' ? (
+                      <img src={job.outputUrl} alt={job.title} className="mt-3 h-44 w-full rounded-[18px] border border-[var(--color-border)] object-cover" />
+                    ) : null}
                     <p className="mt-2 text-sm text-[var(--color-ink-subtle)]">{new Date(job.createdAt).toLocaleString()} • {job.creditsUsed} credits</p>
                   </article>
                 ))}

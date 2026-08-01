@@ -259,8 +259,20 @@
 		@apply h-24 rounded-[16px];
 	}
 
+	.ai-gallery-thumb-image {
+		@apply h-24 w-full rounded-[16px] object-cover;
+	}
+
 	.ai-gallery-thumb-meta {
 		@apply mt-2 flex items-center justify-between text-[11px] font-semibold text-[var(--color-ink-subtle)];
+	}
+
+	.ai-preview-media-shell {
+		@apply w-full;
+	}
+
+	.ai-preview-media-image {
+		@apply max-h-[420px] w-full rounded-[22px] border border-[var(--color-border)] object-contain bg-[var(--color-surface-1)];
 	}
 }
 

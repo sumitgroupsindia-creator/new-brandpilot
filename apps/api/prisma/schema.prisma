@@ -373,7 +373,7 @@ model Asset {
   kind        AssetKind
   status      AssetStatus @default(QUEUED)
   creditsUsed Int         @default(0)
-  outputUrl   String?     @db.VarChar(2048)
+  outputUrl   String?     @db.LongText
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 

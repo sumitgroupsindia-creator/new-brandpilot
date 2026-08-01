@@ -11,6 +11,10 @@ import { TenantContextMiddleware } from './tenancy/tenancy.middleware';
 import { setupSwagger } from './common/swagger';
 
 async function bootstrap() {
+  if (!process.env.GENERATION_WORKER_ENABLED && process.env.NODE_ENV !== 'production') {
+    process.env.GENERATION_WORKER_ENABLED = 'true';
+  }
+
   const app = await NestFactory.create(AppModule, {
     bufferLogs: true,
   });

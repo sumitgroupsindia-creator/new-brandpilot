@@ -134,6 +134,7 @@ export interface PublicUserResponse {
   id: string;
   email: string;
   name: string | null;
+  themeMode: 'light' | 'dark' | 'system';
   status: string;
   emailVerifiedAt: string | null;
   tenantId: string;
@@ -358,7 +359,7 @@ export async function apiGetMe() {
   return data;
 }
 
-export async function apiUpdateMe(payload: { name?: string }) {
+export async function apiUpdateMe(payload: { name?: string; themeMode?: 'light' | 'dark' | 'system' }) {
   const { data } = await webApi.patch<PublicUserResponse>('/me', payload);
   return data;
 }

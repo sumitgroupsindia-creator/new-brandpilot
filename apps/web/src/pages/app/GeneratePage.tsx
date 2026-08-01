@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { SectionHeader } from '@shared/components/shared/SectionHeader';
 import { useFeedback } from '@brandpilot/shared';
 import { Badge } from '@shared/components/ui/Badge';
@@ -40,6 +41,7 @@ function fileToDataUrl(file: File) {
 
 export function GeneratePage() {
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
   const framesQuery = useQuery({ queryKey: ['frames', 'ai-studio'], queryFn: () => apiGetFramesByCategory() });
   const jobsQuery = useQuery({ queryKey: ['generation-jobs'], queryFn: apiGetGenerationJobs });
 
@@ -57,6 +59,17 @@ export function GeneratePage() {
   const latestImageJob = imageJobs[0] ?? null;
   const latestVideoJob = videoJobs[0] ?? null;
   const promptIdeas = ['Diwali sale poster', 'New product launch', 'Birthday flyer', 'Wedding invite'];
+
+  const promptFromHome = searchParams.get('prompt')?.trim() ?? '';
+
+  useEffect(() => {
+    if (!promptFromHome) {
+      return;
+    }
+
+    setKind('IMAGE');
+    setPrompt(promptFromHome);
+  }, [promptFromHome]);
 
   const createJobMutation = useMutation({
     mutationFn: apiCreateGenerationJob,

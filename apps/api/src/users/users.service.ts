@@ -28,10 +28,13 @@ export class UsersService {
     return this.findById(id, tenantId);
   }
 
-  async updateProfile(id: string, tenantId: string, data: { name?: string }) {
+  async updateProfile(id: string, tenantId: string, data: { name?: string; themeMode?: 'light' | 'dark' | 'system' }) {
     const user = await this.prisma.user.update({
       where: { id },
-      data,
+      data: {
+        ...(data.name !== undefined ? { name: data.name } : {}),
+        ...(data.themeMode !== undefined ? { themeMode: data.themeMode.toUpperCase() as 'LIGHT' | 'DARK' | 'SYSTEM' } : {}),
+      },
       include: {
         roles: {
           include: {
@@ -57,6 +60,7 @@ export class UsersService {
       tenantId: user.tenantId,
       roles: user.roles.map((ur: any) => ur.role.key),
       createdAt: user.createdAt.toISOString(),
+      themeMode: String(user.themeMode || 'SYSTEM').toLowerCase(),
     };
   }
 }

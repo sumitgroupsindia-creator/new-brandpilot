@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { AppHeader } from '@shared/components/shared/AppHeader';
 import { AppSidebar } from '@shared/components/shared/AppSidebar';
 import { apiGetPublicConfig } from '../lib/api';
-import { useMe } from '../hooks/useAuth';
+import { useMe, useUpdateMe } from '../hooks/useAuth';
 import { useAuthStore } from '../state/authStore';
 
 const links = [
@@ -23,21 +23,31 @@ const THEME_STORAGE_KEY = 'brandpilot-theme-mode';
 
 export function WebLayout() {
   const [isNavOpen, setIsNavOpen] = useState(false);
-  const [themeMode, setThemeMode] = useState<ThemeMode>('system');
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => getStoredThemeMode());
   const me = useMe();
+  const updateMe = useUpdateMe();
   const clearAuth = useAuthStore(state => state.clear);
   const config = useQuery({ queryKey: ['public-config'], queryFn: apiGetPublicConfig });
   const appName = (config.data?.branding?.appName as string) ?? 'BrandPilot';
+  const hydratedServerThemeRef = useRef(false);
+  const skipNextPersistRef = useRef(false);
 
   useEffect(() => {
-    const saved = window.localStorage.getItem(THEME_STORAGE_KEY);
-    if (saved === 'light' || saved === 'dark' || saved === 'system') {
-      setThemeMode(saved);
+    const serverTheme = me.data?.themeMode;
+    if (serverTheme && !hydratedServerThemeRef.current) {
+      hydratedServerThemeRef.current = true;
+      skipNextPersistRef.current = true;
+      setThemeMode(serverTheme);
     }
-  }, []);
+  }, [me.data?.themeMode]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
     window.localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+
     const root = document.documentElement;
     const media = window.matchMedia('(prefers-color-scheme: dark)');
 
@@ -51,6 +61,19 @@ export function WebLayout() {
 
     applyTheme();
 
+    if (!me.data) {
+      return;
+    }
+
+    if (skipNextPersistRef.current) {
+      skipNextPersistRef.current = false;
+      return;
+    }
+
+    if (me.data.themeMode !== themeMode && !updateMe.isPending) {
+      updateMe.mutate({ themeMode });
+    }
+
     if (themeMode !== 'system') {
       return;
     }
@@ -58,7 +81,7 @@ export function WebLayout() {
     const onSystemThemeChange = () => applyTheme();
     media.addEventListener('change', onSystemThemeChange);
     return () => media.removeEventListener('change', onSystemThemeChange);
-  }, [themeMode]);
+  }, [me.data, themeMode, updateMe]);
 
   return (
     <div className="relative h-screen overflow-hidden bg-brand-surface text-[var(--color-ink)]">
@@ -87,4 +110,17 @@ export function WebLayout() {
       </div>
     </div>
   );
+}
+
+function getStoredThemeMode(): ThemeMode {
+  if (typeof window === 'undefined') {
+    return 'system';
+  }
+
+  const saved = window.localStorage.getItem(THEME_STORAGE_KEY);
+  if (saved === 'light' || saved === 'dark' || saved === 'system') {
+    return saved;
+  }
+
+  return 'system';
 }

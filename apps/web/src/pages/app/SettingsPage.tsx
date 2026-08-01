@@ -40,6 +40,7 @@ export function SettingsPage() {
   const [website, setWebsite] = useState('');
   const [address, setAddress] = useState('');
   const [tagline, setTagline] = useState('');
+  const [themeMode, setThemeMode] = useState<'light' | 'dark' | 'system'>('system');
   const [preferences, setPreferences] = useState<NotificationPreferenceResponse[]>([]);
 
   const createSubscriptionMutation = useMutation({
@@ -68,7 +69,10 @@ export function SettingsPage() {
     if (me.data?.name) {
       setName(me.data.name);
     }
-  }, [me.data?.name]);
+    if (me.data?.themeMode) {
+      setThemeMode(me.data.themeMode);
+    }
+  }, [me.data?.name, me.data?.themeMode]);
 
   useEffect(() => {
     const localProfile = readLocalProfileFields();
@@ -87,7 +91,7 @@ export function SettingsPage() {
 
   const onSaveProfile = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    await updateMe.mutateAsync({ name });
+    await updateMe.mutateAsync({ name, themeMode });
     writeLocalProfileFields({
       company: company.trim(),
       phone: phone.trim(),
@@ -126,8 +130,10 @@ export function SettingsPage() {
           <input className="field" placeholder="Website" value={website} onChange={event => setWebsite(event.target.value)} />
           <input className="field" placeholder="Tagline" value={tagline} onChange={event => setTagline(event.target.value)} />
           <textarea className="field md:col-span-2" placeholder="Address" rows={3} value={address} onChange={event => setAddress(event.target.value)} />
-          <select className="field">
-            <option>English</option>
+          <select className="field" value={themeMode} onChange={event => setThemeMode(event.target.value as 'light' | 'dark' | 'system')}>
+            <option value="system">System theme</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
           </select>
           <Button className="md:col-span-2" type="submit" loading={updateMe.isPending}>Save profile</Button>
         </form>

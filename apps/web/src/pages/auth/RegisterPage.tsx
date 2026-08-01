@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useRegister } from '../../hooks/useAuth';
+import { Button } from '@brandpilot/shared';
 
 export function RegisterPage() {
   const navigate = useNavigate();
@@ -49,9 +50,9 @@ export function RegisterPage() {
               <input className="field" type="text" placeholder="Name" value={name} onChange={e => setName(e.target.value)} />
               <input className="field" type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} />
               <input className="field" type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} />
-              <button className="btn-primary w-full" type="submit" disabled={register.isPending}>
+              <Button className="w-full rounded-[16px]" type="submit" loading={register.isPending}>
                 {register.isPending ? 'Creating...' : 'Create account'}
-              </button>
+              </Button>
             </form>
 
             {register.isError ? (

@@ -44,8 +44,14 @@ model Tenant {
 enum TenantStatus {
   ACTIVE
   SUSPENDED
+}
 
-  @@map("tenant_status")
+enum ThemeMode {
+  LIGHT
+  DARK
+  SYSTEM
+
+  @@map("theme_mode")
 }
 
 model User {
@@ -54,6 +60,7 @@ model User {
   email             String     @db.VarChar(255)
   passwordHash      String?    @db.VarChar(255)
   name              String?    @db.VarChar(255)
+  themeMode         ThemeMode  @default(SYSTEM)
   status            UserStatus @default(PENDING_VERIFICATION)
   emailVerifiedAt   DateTime?
   emailVerifyToken  String?    @db.VarChar(255)

@@ -5,4 +5,5 @@ export * from './types/tenant';
 export * from './types/config';
 export * from './validation/auth';
 export * from './validation/candidate';
+export * from './components/ui/Button';
 export * from './components/ui/FeedbackProvider';

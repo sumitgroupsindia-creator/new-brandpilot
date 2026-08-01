@@ -445,3 +445,30 @@
 	background: #10192b;
 	border-color: #33425f;
 }
+
+:root[data-theme='dark'] .ai-history-shell,
+:root[data-theme='dark'] .ai-history-hero,
+:root[data-theme='dark'] .ai-history-featured,
+:root[data-theme='dark'] .ai-history-list-card,
+:root[data-theme='dark'] .ai-history-side-card {
+	background: linear-gradient(180deg, rgba(16, 25, 43, 0.98) 0%, rgba(11, 18, 32, 0.98) 100%);
+	border-color: #31425e;
+	box-shadow: 0 20px 60px rgba(2, 8, 23, 0.42);
+}
+
+:root[data-theme='dark'] .ai-history-featured-panel,
+:root[data-theme='dark'] .ai-history-summary-row,
+:root[data-theme='dark'] .ai-history-pager {
+	background: #10192b;
+	border-color: #33425f;
+}
+
+:root[data-theme='dark'] .ai-history-empty-preview {
+	background: linear-gradient(135deg, #08101d 0%, #162545 52%, #0a1a2e 100%);
+}
+
+:root[data-theme='dark'] .ai-history-preview-shell,
+:root[data-theme='dark'] .ai-history-featured-panel,
+:root[data-theme='dark'] .ai-history-job-card {
+	border-color: #32425d;
+}

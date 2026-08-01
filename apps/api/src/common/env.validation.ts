@@ -6,22 +6,22 @@ class EnvVariables {
   NODE_ENV: string = 'development';
 
   @IsString()
-  DATABASE_URL: string;
+  DATABASE_URL!: string;
 
   @IsString()
-  REDIS_URL: string;
+  REDIS_URL!: string;
 
   @IsString()
-  MASTER_ENCRYPTION_KEY: string;
+  MASTER_ENCRYPTION_KEY!: string;
 
   @IsString()
-  JWT_PRIVATE_KEY: string;
+  JWT_PRIVATE_KEY!: string;
 
   @IsString()
-  JWT_PUBLIC_KEY: string;
+  JWT_PUBLIC_KEY!: string;
 
   @IsString()
-  COOKIE_SECRET: string;
+  COOKIE_SECRET!: string;
 
   @IsString()
   @IsOptional()

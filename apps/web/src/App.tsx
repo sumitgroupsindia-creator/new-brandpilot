@@ -18,12 +18,16 @@ import { useAuthStore } from './state/authStore';
 
 function AuthOnly({ children }: { children: JSX.Element }) {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const isBootstrapping = useAuthStore(state => state.isBootstrapping);
+  if (isBootstrapping) return null;
   if (isAuthenticated) return <Navigate to="/app/home" replace />;
   return children;
 }
 
 function Protected({ children }: { children: JSX.Element }) {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const isBootstrapping = useAuthStore(state => state.isBootstrapping);
+  if (isBootstrapping) return null;
   if (!isAuthenticated) return <Navigate to="/auth/login" replace />;
   return children;
 }

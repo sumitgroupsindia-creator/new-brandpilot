@@ -12,6 +12,8 @@ export const webApi = axios.create({
   },
 });
 
+let webRefreshRequest: Promise<TokenPairResponse> | null = null;
+
 webApi.interceptors.request.use(config => {
   const accessToken = localStorage.getItem('bp_access_token');
   if (accessToken) {
@@ -27,8 +29,45 @@ webApi.interceptors.request.use(config => {
 
 webApi.interceptors.response.use(
   response => response,
-  error => {
+  async error => {
     if (axios.isAxiosError(error) && error.code !== 'ERR_CANCELED') {
+      const originalRequest = error.config;
+      const shouldTryRefresh =
+        error.response?.status === 401 &&
+        !originalRequest?.url?.includes('/auth/refresh') &&
+        !(originalRequest as typeof originalRequest & { _retry?: boolean })?._retry;
+
+      if (shouldTryRefresh) {
+        const storedRefreshToken = localStorage.getItem('bp_refresh_token');
+        if (storedRefreshToken) {
+          try {
+            webRefreshRequest ??= axios
+              .post<TokenPairResponse>(
+                '/api/auth/refresh',
+                { refreshToken: storedRefreshToken },
+                { headers: { 'Content-Type': 'application/json', 'x-tenant-slug': DEFAULT_TENANT_SLUG } },
+              )
+              .then(response => response.data)
+              .finally(() => {
+                webRefreshRequest = null;
+              });
+
+            const refreshed = await webRefreshRequest;
+            localStorage.setItem('bp_access_token', refreshed.accessToken);
+            localStorage.setItem('bp_refresh_token', refreshed.refreshToken);
+
+            if (originalRequest) {
+              (originalRequest as typeof originalRequest & { _retry?: boolean })._retry = true;
+              originalRequest.headers.Authorization = `Bearer ${refreshed.accessToken}`;
+              return webApi(originalRequest);
+            }
+          } catch {
+            localStorage.removeItem('bp_access_token');
+            localStorage.removeItem('bp_refresh_token');
+          }
+        }
+      }
+
       const message = extractApiErrorMessage(error);
       const status = error.response?.status;
 

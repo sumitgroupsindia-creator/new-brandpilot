@@ -11,6 +11,8 @@ export const adminApi = axios.create({
   },
 });
 
+let adminRefreshRequest: Promise<TokenPairResponse> | null = null;
+
 adminApi.interceptors.request.use(config => {
   const token = localStorage.getItem('bp_admin_access_token');
   if (token) {
@@ -24,8 +26,45 @@ adminApi.interceptors.request.use(config => {
 
 adminApi.interceptors.response.use(
   response => response,
-  error => {
+  async error => {
     if (axios.isAxiosError(error) && error.code !== 'ERR_CANCELED') {
+      const originalRequest = error.config;
+      const shouldTryRefresh =
+        error.response?.status === 401 &&
+        !originalRequest?.url?.includes('/auth/refresh') &&
+        !(originalRequest as typeof originalRequest & { _retry?: boolean })?._retry;
+
+      if (shouldTryRefresh) {
+        const storedRefreshToken = localStorage.getItem('bp_admin_refresh_token');
+        if (storedRefreshToken) {
+          try {
+            adminRefreshRequest ??= axios
+              .post<TokenPairResponse>(
+                '/api/auth/refresh',
+                { refreshToken: storedRefreshToken },
+                { headers: { 'Content-Type': 'application/json', 'x-tenant-slug': DEFAULT_TENANT_SLUG } },
+              )
+              .then(response => response.data)
+              .finally(() => {
+                adminRefreshRequest = null;
+              });
+
+            const refreshed = await adminRefreshRequest;
+            localStorage.setItem('bp_admin_access_token', refreshed.accessToken);
+            localStorage.setItem('bp_admin_refresh_token', refreshed.refreshToken);
+
+            if (originalRequest) {
+              (originalRequest as typeof originalRequest & { _retry?: boolean })._retry = true;
+              originalRequest.headers.Authorization = `Bearer ${refreshed.accessToken}`;
+              return adminApi(originalRequest);
+            }
+          } catch {
+            localStorage.removeItem('bp_admin_access_token');
+            localStorage.removeItem('bp_admin_refresh_token');
+          }
+        }
+      }
+
       const message = extractAdminApiErrorMessage(error);
       const status = error.response?.status;
 
@@ -256,6 +295,11 @@ export interface AdminAiConfigResponse {
 
 export async function adminLogin(payload: { email: string; password: string }) {
   const { data } = await adminApi.post<TokenPairResponse>('/auth/login', payload);
+  return data;
+}
+
+export async function adminRefresh(refreshToken: string) {
+  const { data } = await adminApi.post<TokenPairResponse>('/auth/refresh', { refreshToken });
   return data;
 }
 

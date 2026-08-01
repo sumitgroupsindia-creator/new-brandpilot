@@ -21,12 +21,16 @@ import { useAdminAuthStore } from './state/authStore';
 
 function AdminProtected({ children }: { children: JSX.Element }) {
   const isAuthenticated = useAdminAuthStore(state => state.isAuthenticated);
+  const isBootstrapping = useAdminAuthStore(state => state.isBootstrapping);
+  if (isBootstrapping) return null;
   if (!isAuthenticated) return <Navigate to="/auth/login" replace />;
   return children;
 }
 
 function AdminGuestOnly({ children }: { children: JSX.Element }) {
   const isAuthenticated = useAdminAuthStore(state => state.isAuthenticated);
+  const isBootstrapping = useAdminAuthStore(state => state.isBootstrapping);
+  if (isBootstrapping) return null;
   if (isAuthenticated) return <Navigate to="/dashboard" replace />;
   return children;
 }

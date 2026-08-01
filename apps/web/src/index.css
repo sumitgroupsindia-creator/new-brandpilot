@@ -1,0 +1,147 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+	--brand-surface: #f5f7fb;
+	--brand-ink: #08111f;
+	--brand-teal: #0f766e;
+	--brand-amber: #f59e0b;
+	--brand-violet: #6d28d9;
+}
+
+@layer base {
+	html,
+	body,
+	#root {
+		min-height: 100%;
+	}
+
+	* {
+		@apply box-border;
+	}
+
+	::selection {
+		background: rgba(15, 118, 110, 0.2);
+		color: var(--brand-ink);
+	}
+
+	body {
+		margin: 0;
+		font-family: 'Space Grotesk', 'Avenir Next', 'Segoe UI', sans-serif;
+		color: var(--brand-ink);
+		background:
+			radial-gradient(circle at 92% 0%, rgba(12, 166, 153, 0.18) 0%, transparent 28%),
+			radial-gradient(circle at 0% 100%, rgba(245, 158, 11, 0.16) 0%, transparent 30%),
+			var(--brand-surface);
+	}
+}
+
+@layer components {
+	.bg-brand-surface {
+		background-color: var(--brand-surface);
+	}
+
+	.bg-grid {
+		background-image: linear-gradient(to right, rgba(8, 17, 31, 0.05) 1px, transparent 1px),
+			linear-gradient(to bottom, rgba(8, 17, 31, 0.05) 1px, transparent 1px);
+		background-size: 24px 24px;
+	}
+
+	.glass-panel {
+		@apply rounded-[28px] border border-white/70 bg-white/75 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_70px_rgba(15,23,42,0.12)];
+	}
+
+	.hero-shell {
+		@apply rounded-[32px] border border-white/70 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.95),_rgba(255,255,255,0.75))] p-6 shadow-[0_28px_70px_rgba(15,23,42,0.12)] backdrop-blur-xl transition-all duration-300;
+	}
+
+	.pill {
+		@apply inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-600 shadow-sm;
+	}
+
+	.auth-wrap {
+		@apply relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10 sm:px-6 lg:px-8;
+	}
+
+	.auth-card {
+		@apply relative w-full max-w-6xl overflow-hidden rounded-[32px] border border-white/70 bg-white/85 shadow-[0_35px_90px_rgba(15,23,42,0.16)] backdrop-blur-2xl;
+	}
+
+	.auth-visual {
+		@apply hidden flex-col justify-between bg-[linear-gradient(135deg,_rgba(15,118,110,0.98),_rgba(3,105,161,0.95),_rgba(109,40,217,0.95))] p-8 text-white lg:flex;
+	}
+
+	.auth-form {
+		@apply flex flex-col justify-center p-6 sm:p-8 lg:p-10;
+	}
+
+	.auth-eyebrow {
+		font-family: 'IBM Plex Mono', monospace;
+		@apply text-xs uppercase tracking-[0.24em] text-teal-700;
+	}
+
+	.auth-title {
+		@apply mt-2 text-3xl font-semibold tracking-tight text-slate-900;
+	}
+
+	.auth-subtitle {
+		@apply mt-2 text-sm leading-6 text-slate-600;
+	}
+
+	.field {
+		@apply w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-teal-600 focus:bg-white focus:shadow-[0_0_0_4px_rgba(20,184,166,0.16)];
+	}
+
+	.btn-primary {
+		@apply rounded-2xl bg-gradient-to-r from-teal-600 via-cyan-600 to-sky-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-teal-500/20 transition duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-teal-500/30;
+	}
+
+	.btn-secondary {
+		@apply rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:bg-slate-50;
+	}
+
+	.btn-ghost {
+		@apply rounded-2xl border border-transparent bg-transparent px-4 py-3 text-sm font-semibold text-slate-700 transition duration-300 hover:bg-slate-100;
+	}
+
+	.input-shell {
+		@apply rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 text-sm text-slate-800 shadow-sm transition duration-300 focus-within:border-teal-500 focus-within:ring-4 focus-within:ring-teal-500/10;
+	}
+
+	.card-surface {
+		@apply rounded-[24px] border border-slate-200/80 bg-white/85 p-4 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg;
+	}
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--brand-surface: #07111d;
+		--brand-ink: #f8fafc;
+	}
+
+	body {
+		background:
+			radial-gradient(circle at 92% 0%, rgba(20, 184, 166, 0.2) 0%, transparent 22%),
+			radial-gradient(circle at 0% 100%, rgba(245, 158, 11, 0.16) 0%, transparent 26%),
+			#07111d;
+	}
+
+	.glass-panel,
+	.hero-shell,
+	.card-surface {
+		@apply border-slate-700/70 bg-slate-900/80 text-slate-100 shadow-[0_20px_60px_rgba(2,8,23,0.45)];
+	}
+
+	.btn-secondary,
+	.btn-ghost,
+	.input-shell {
+		@apply border-slate-700 bg-slate-900/80 text-slate-100;
+	}
+
+	.field {
+		@apply border-slate-700 bg-slate-900/70 text-slate-100;
+	}
+}
